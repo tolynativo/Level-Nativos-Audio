@@ -15,5 +15,5 @@ for TYPE in vstroot auroot;do
 done
 pkgbuild --root "$DIST/vstroot" --identifier com.nativosaudio.level.vst3 --version 0.2.1 --install-location / "$DIST/Level-VST3.pkg"
 pkgbuild --root "$DIST/auroot" --identifier com.nativosaudio.level.au --version 0.2.1 --install-location / "$DIST/Level-AU.pkg"
-(cd "$DIST" && productbuild --distribution "$ROOT/Packaging/mac/distribution.xml" --resources "$ROOT/Packaging/mac" Level-Mac-Universal-UNSIGNED.pkg)
+(cd "$DIST" && productbuild --distribution "$ROOT/Packaging/mac/distribution.xml" --resources "$ROOT/Packaging/mac" --package-path "$DIST" Level-Mac-Universal-UNSIGNED.pkg)
 test -s "$DIST/Level-Mac-Universal-UNSIGNED.pkg"
