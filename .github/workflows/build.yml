@@ -1,0 +1,55 @@
+name: Build LEVEL Installers
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  mac-universal:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure universal Mac VST3 and AU
+        run: cmake -S . -B build-mac -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+      - name: Compile
+        run: cmake --build build-mac --config Release --parallel 4
+      - name: Verify both formats and architectures
+        shell: bash
+        run: |
+          set -euo pipefail
+          for extension in vst3 component; do
+            bundle="$(find build-mac -type d -name "Level.$extension" -print -quit)"
+            test -n "$bundle"
+            binary="$(find "$bundle/Contents/MacOS" -maxdepth 1 -type f | head -1)"
+            test -n "$binary"
+            lipo -verify_arch arm64 x86_64 "$binary"
+          done
+      - name: Create installer
+        run: bash Packaging/mac/package.sh build-mac
+      - name: Verify installer options
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/Level-Mac-Universal-UNSIGNED.pkg
+          pkgutil --expand dist/Level-Mac-Universal-UNSIGNED.pkg dist/expanded
+          grep -q 'choice="vst3"' dist/expanded/Distribution
+          grep -q 'choice="au"' dist/expanded/Distribution
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LEVEL-Mac-Universal-UNSIGNED-PKG
+          path: dist/Level-Mac-Universal-UNSIGNED.pkg
+          if-no-files-found: error
+  windows-vst3:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -A x64
+      - name: Compile
+        run: cmake --build build --config Release --parallel 4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LEVEL-Windows-VST3-UNSIGNED
+          path: build/Level_artefacts/Release/VST3/**
+          if-no-files-found: error
