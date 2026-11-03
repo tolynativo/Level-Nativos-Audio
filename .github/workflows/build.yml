@@ -11,9 +11,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Configure universal Mac VST3 and AU
-        run: cmake -S . -B build-mac -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake -S . -B build-mac -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 2>&1 | tee mac-configure.log
       - name: Compile
-        run: cmake --build build-mac --config Release --parallel 4
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake --build build-mac --config Release --parallel 4 2>&1 | tee mac-build.log
       - name: Verify both formats and architectures
         shell: bash
         run: |
@@ -26,7 +32,10 @@ jobs:
             lipo -verify_arch arm64 x86_64 "$binary"
           done
       - name: Create installer
-        run: bash Packaging/mac/package.sh build-mac
+        shell: bash
+        run: |
+          set -o pipefail
+          bash Packaging/mac/package.sh build-mac 2>&1 | tee mac-package.log
       - name: Verify installer options
         shell: bash
         run: |
@@ -36,6 +45,16 @@ jobs:
           grep -q 'choice="vst3"' dist/expanded/Distribution
           grep -q 'choice="au"' dist/expanded/Distribution
           pkgutil --check-signature dist/Level-Mac-Universal-UNSIGNED.pkg || true
+      - name: Upload diagnostics even when build fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: LEVEL-Mac-Build-Diagnostics
+          path: |
+            mac-configure.log
+            mac-build.log
+            mac-package.log
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: LEVEL-Mac-Universal-UNSIGNED-PKG
