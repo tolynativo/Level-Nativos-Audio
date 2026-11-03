@@ -1,5 +1,6 @@
 #pragma once
 #include "PluginProcessor.h"
+#include "RegionManager.h"
 #include <atomic>
 #include <memory>
 
@@ -12,15 +13,17 @@ public:
     LevelOfflineExport() : juce::Thread("LEVEL Offline Bounce") {}
     ~LevelOfflineExport() override { stopThread(-1); }
     bool begin(const juce::File& input, const juce::File& destination,
-               const juce::MemoryBlock& processorState, int sampleBits = 24)
+               const juce::MemoryBlock& processorState,
+               std::vector<level::AudioRegion> manualRegions, int sampleBits = 24)
     {
         if (isThreadRunning() || !input.existsAsFile() || input == destination)
             return false;
-        if (sampleBits != 16 && sampleBits != 24)
+        if (sampleBits != 16 && sampleBits != 24 && sampleBits != 32)
             return false;
         in = input;
         out = destination;
         stateData = processorState;
+        regionEdits = std::move(manualRegions);
         bitDepth = sampleBits;
         status.store(Status::Working);
         startThread();
@@ -52,7 +55,10 @@ private:
         const auto options = juce::AudioFormatWriter::Options{}
             .withSampleRate(reader->sampleRate)
             .withNumChannels((int)reader->numChannels)
-            .withBitsPerSample(bitDepth);
+            .withBitsPerSample(bitDepth)
+            .withSampleFormat(bitDepth == 32
+                ? juce::AudioFormatWriterOptions::SampleFormat::floatingPoint
+                : juce::AudioFormatWriterOptions::SampleFormat::integral);
         auto writer = wav.createWriterFor(stream, options);
         if (!writer) { status.store(Status::Failed); return; }
         // Successful creation transfers ownership of stream to the writer.
@@ -72,6 +78,29 @@ private:
             // Restrict the buffer to valid samples, especially for the final block.
             juce::AudioBuffer<float> segment(buffer.getArrayOfWritePointers(), (int)reader->numChannels, count);
             engine.processBlock(segment, midi);
+            // Manually selected regions are rendered non-destructively. Soft 15ms
+            // boundaries reduce clicks. No modifications are made to source audio.
+            for (const auto& region : regionEdits)
+            {
+                if (!region.enabled) continue;
+                const auto first = (juce::int64)(region.startSeconds * reader->sampleRate);
+                const auto last = (juce::int64)(region.endSeconds * reader->sampleRate);
+                if (last <= offset || first >= offset + count) continue;
+                const int start = (int)juce::jmax((juce::int64)0, first - offset);
+                const int stop = (int)juce::jmin((juce::int64)count, last - offset);
+                const float targetGain = juce::Decibels::decibelsToGain(region.gainDb);
+                const double fadeSamples = reader->sampleRate * 0.015;
+                for (int i = start; i < stop; ++i)
+                {
+                    const double position = (double)(offset + i);
+                    const float fadeIn = (float)juce::jlimit(0.0, 1.0, (position - (double)first) / fadeSamples);
+                    const float fadeOut = (float)juce::jlimit(0.0, 1.0, ((double)last - position) / fadeSamples);
+                    const float blend = juce::jmin(fadeIn, fadeOut);
+                    const float gain = 1.f + (targetGain - 1.f) * blend;
+                    for (int channel = 0; channel < segment.getNumChannels(); ++channel)
+                        segment.getWritePointer(channel)[i] *= gain;
+                }
+            }
             if (!writer->writeFromAudioSampleBuffer(segment, 0, count)) { ok = false; break; }
             offset += count;
         }
@@ -88,6 +117,7 @@ private:
     }
     juce::File in, out;
     juce::MemoryBlock stateData;
+    std::vector<level::AudioRegion> regionEdits;
     int bitDepth = 24;
     std::atomic<Status> status{Status::Idle};
 };
