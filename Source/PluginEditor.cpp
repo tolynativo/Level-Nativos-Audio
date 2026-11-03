@@ -277,6 +277,22 @@ void LevelEditor::paint(juce::Graphics& g)
     }
     if (hasImportedFile && thumbnail.getTotalLength() > 0.0)
     {
+        const float spectTop = waveformBounds().getBottom() + 8.f;
+        const float spectBottom = h - 66.f;
+        if (spectBottom > spectTop)
+        {
+            const juce::Rectangle<float> spectArea(206.f, spectTop, w - 316.f, spectBottom - spectTop);
+            if (auto rendered = spectrogram.getImage(); rendered.isValid())
+                g.drawImage(rendered, spectArea, juce::RectanglePlacement::stretchToFit);
+            else {
+                g.setColour(muted);
+                g.drawText("SPECTROGRAM - ANALYZING", spectArea.toNearestInt(), juce::Justification::centred);
+            }
+            g.setColour(muted);
+            g.setFont(juce::Font(juce::FontOptions(10.f)));
+            g.drawText("16 kHz", (int)spectArea.getX() + 5, (int)spectArea.getY() + 3, 75, 16, juce::Justification::left);
+            g.drawText("200 Hz", (int)spectArea.getX() + 5, (int)spectArea.getBottom() - 19, 75, 16, juce::Justification::left);
+        }
         const auto regionArea = waveformBounds();
         const auto duration = thumbnail.getTotalLength();
         for (const auto& region : regions.all())
@@ -326,7 +342,7 @@ juce::AudioProcessorEditor* LevelProcessor::createEditor()
 
 juce::Rectangle<float> LevelEditor::waveformBounds() const
 {
-    return { 206.f, 276.f, (float)getWidth() - 316.f, (float)getHeight() - 347.f };
+    return { 206.f, 276.f, (float)getWidth() - 316.f, ((float)getHeight() - 347.f) * 0.52f };
 }
 
 double LevelEditor::waveformTimeAt(float x) const
@@ -363,6 +379,7 @@ void LevelEditor::importFile(const juce::File& file)
     }
     hasImportedFile = thumbnail.setSource(new juce::FileInputSource(file));
     if (hasImportedFile) {
+        spectrogram.analyse(file);
         importedFilename = file.getFileName();
         regions.clear();
     } else {
