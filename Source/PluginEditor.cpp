@@ -327,7 +327,7 @@ void LevelEditor::paint(juce::Graphics& g)
             }
             g.setColour(muted);
             g.setFont(juce::Font(juce::FontOptions(10.f)));
-            g.drawText("16 kHz", (int)spectArea.getX() + 5, (int)spectArea.getY() + 3, 75, 16, juce::Justification::left);
+            g.drawText(juce::String(spectrogram.upperFrequencyHz() / 1000.f, 1) + " kHz", (int)spectArea.getX() + 5, (int)spectArea.getY() + 3, 75, 16, juce::Justification::left);
             g.drawText("200 Hz", (int)spectArea.getX() + 5, (int)spectArea.getBottom() - 19, 75, 16, juce::Justification::left);
         }
         const auto regionArea = waveformBounds();
