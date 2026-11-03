@@ -18,15 +18,47 @@ const juce::Colour bg(0xff0b111a), panel(0xff131e2a), outline(0xff2c3b4a);
 const juce::Colour yellow(0xffddc466), text(0xffeef3f9), muted(0xff8295aa);
 }
 
+
+namespace {
+class LevelKnobLook final : public juce::LookAndFeel_V4 {
+public:
+    void drawRotarySlider(juce::Graphics& g,int x,int y,int width,int height,
+                          float pos,float from,float to,juce::Slider&) override
+    {
+        const float r=juce::jmax(12.f,juce::jmin((float)width,(float)height)*.43f);
+        const float cx=(float)x+(float)width*.5f,cy=(float)y+(float)height*.5f;
+        const auto gold=juce::Colour(0xffffd02e);
+        g.setColour(juce::Colour(0xff0b0d10));
+        g.fillEllipse(cx-r,cy-r,2.f*r,2.f*r);
+        g.setColour(juce::Colour(0xff2e323a));
+        g.drawEllipse(cx-r+2.f,cy-r+2.f,2.f*r-4.f,2.f*r-4.f,3.f);
+        juce::Path background,progress;
+        background.addCentredArc(cx,cy,r-5.f,r-5.f,0.f,from,to,true);
+        progress.addCentredArc(cx,cy,r-5.f,r-5.f,0.f,from,from+pos*(to-from),true);
+        g.setColour(juce::Colour(0xff373b42));
+        g.strokePath(background,juce::PathStrokeType(4.f,juce::PathStrokeType::curved,juce::PathStrokeType::rounded));
+        g.setColour(gold);
+        g.strokePath(progress,juce::PathStrokeType(4.f,juce::PathStrokeType::curved,juce::PathStrokeType::rounded));
+        const float angle=from+pos*(to-from);
+        g.setColour(juce::Colour(0xffeeeeee));
+        g.drawLine(cx+std::sin(angle)*(r*.19f),cy-std::cos(angle)*(r*.19f),
+                   cx+std::sin(angle)*(r*.77f),cy-std::cos(angle)*(r*.77f),2.f);
+    }
+};
+LevelKnobLook levelKnobLook;
+} // namespace
+
 void LevelEditor::configureSlider(juce::Slider& s)
 {
     s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 105, 21);
+    s.setLookAndFeel(&levelKnobLook);
+    s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 92, 20);
+    s.setNumDecimalPlacesToDisplay(1);
     s.setColour(juce::Slider::rotarySliderFillColourId, yellow);
     s.setColour(juce::Slider::rotarySliderOutlineColourId, outline);
     s.setColour(juce::Slider::thumbColourId, yellow);
     s.setColour(juce::Slider::textBoxTextColourId, text);
-    s.setColour(juce::Slider::textBoxBackgroundColourId, panel);
+    s.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xff101215));
     s.setColour(juce::Slider::textBoxOutlineColourId, outline);
     addAndMakeVisible(s);
 }
