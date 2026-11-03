@@ -42,10 +42,8 @@ private:
         }
 
         // Never modify the original; an output file must be a separate path.
-        if (out.existsAsFile() && !out.deleteFile()) {
-            status.store(Status::Failed); return;
-        }
-        auto fileStream = out.createOutputStream();
+        juce::TemporaryFile temporary(out);
+        auto fileStream = temporary.getFile().createOutputStream();
         if (!fileStream || !fileStream->openedOk()) {
             status.store(Status::Failed); return;
         }
@@ -81,10 +79,12 @@ private:
         engine.releaseResources();
         if (!ok || threadShouldExit())
         {
-            out.deleteFile();
             status.store(Status::Failed);
         }
-        else status.store(Status::Complete);
+        else
+        {
+            status.store(temporary.overwriteTargetFileWithTemporary() ? Status::Complete : Status::Failed);
+        }
     }
     juce::File in, out;
     juce::MemoryBlock stateData;
