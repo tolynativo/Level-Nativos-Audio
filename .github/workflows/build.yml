@@ -29,7 +29,7 @@ jobs:
             test -n "$bundle"
             binary="$(find "$bundle/Contents/MacOS" -maxdepth 1 -type f | head -1)"
             test -n "$binary"
-            lipo -verify_arch arm64 x86_64 "$binary"
+            lipo "$binary" -verify_arch arm64 x86_64
           done
       - name: Create installer
         shell: bash
