@@ -5,7 +5,7 @@ static void f(juce::AudioProcessorValueTreeState::ParameterLayout& p,const char*
  p.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id,1},id,juce::NormalisableRange<float>(lo,hi),init));
 }
 static void b(juce::AudioProcessorValueTreeState::ParameterLayout& p,const char* id) {
- p.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID{id,1},id,true));
+ p.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID{id,1},id,false));
 }
 juce::AudioProcessorValueTreeState::ParameterLayout LevelProcessor::parameters(){
  juce::AudioProcessorValueTreeState::ParameterLayout p;
