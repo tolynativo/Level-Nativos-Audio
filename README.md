@@ -14,3 +14,6 @@ Both input and output meters read real samples; when the input and output are si
 
 ## Manual
 Bundled under Resources/Level-Manual.html and linked from Settings when the plugin is installed. X2 Compressor trademark font has not yet been supplied and is not included.
+
+## v0.3.0 implementation note
+The interface was revised with full-size waveform viewing, seven selectable module pages, actual input/output knobs and improved non-overlapping layout. The meters read real audio and reset to zero on a silent input block. This is a basic realtime processor; AI event detection, offline clip editing, region handles, spectral repair, ARA transfer, and a verified update downloader are NOT implemented. The visual trademark font is not included without the X2 font asset. Mac installer build and host audio tests are pending.
