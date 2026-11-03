@@ -91,8 +91,9 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
         auto chooser = std::make_shared<juce::FileChooser>(
             "Import vocal audio", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
             "*.wav;*.aif;*.aiff;*.flac");
+        juce::Component::SafePointer<LevelEditor> safe(this);
         chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-            [this, chooser](const juce::FileChooser& selectedFile) { importFile(selectedFile.getResult()); });
+            [safe, chooser](const juce::FileChooser& selectedFile) { if (safe) safe->importFile(selectedFile.getResult()); });
     };
     exportButton.onClick = [this] {
         if (!hasImportedFile || !importedAudio.existsAsFile())
@@ -135,27 +136,31 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
                 ranged->setValueNotifyingHost(ranged->getDefaultValue());
     };
     save.onClick = [this] {
+        juce::Component::SafePointer<LevelEditor> safe(this);
         auto chooser = std::make_shared<juce::FileChooser>(
             "Save LEVEL preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.levelpreset");
         chooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
-            [this, chooser](const juce::FileChooser& fileChooser) {
+            [safe, chooser](const juce::FileChooser& fileChooser) {
+                if (!safe) return;
                 auto file = fileChooser.getResult();
                 if (file != juce::File())
                 {
                     juce::MemoryBlock data;
-                    processor.getStateInformation(data);
+                    safe->processor.getStateInformation(data);
                     file.replaceWithData(data.getData(), data.getSize());
                 }
             });
     };
     load.onClick = [this] {
+        juce::Component::SafePointer<LevelEditor> safe(this);
         auto chooser = std::make_shared<juce::FileChooser>(
             "Load LEVEL preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.levelpreset");
         chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-            [this, chooser](const juce::FileChooser& fileChooser) {
+            [safe, chooser](const juce::FileChooser& fileChooser) {
+                if (!safe) return;
                 juce::MemoryBlock data;
                 if (fileChooser.getResult().loadFileAsData(data))
-                    processor.setStateInformation(data.getData(), (int)data.getSize());
+                    safe->processor.setStateInformation(data.getData(), (int)data.getSize());
             });
     };
     settings.onClick = [this] {
