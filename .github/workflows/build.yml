@@ -1,4 +1,4 @@
-name: Build LEVEL Installers
+name: Build LEVEL Mac Universal Installer
 on:
   workflow_dispatch:
   push:
@@ -41,10 +41,11 @@ jobs:
         run: |
           set -euo pipefail
           test -s dist/Level-Mac-Universal-UNSIGNED.pkg
+          rm -rf dist/expanded
           pkgutil --expand dist/Level-Mac-Universal-UNSIGNED.pkg dist/expanded
           grep -q 'choice="vst3"' dist/expanded/Distribution
           grep -q 'choice="au"' dist/expanded/Distribution
-          pkgutil --check-signature dist/Level-Mac-Universal-UNSIGNED.pkg || true
+          echo 'Installer structure verified; package is unsigned.'
       - name: Upload diagnostics even when build fails
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,17 +60,4 @@ jobs:
         with:
           name: LEVEL-Mac-Universal-UNSIGNED-PKG
           path: dist/Level-Mac-Universal-UNSIGNED.pkg
-          if-no-files-found: error
-  windows-vst3:
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-      - name: Configure
-        run: cmake -S . -B build -A x64
-      - name: Compile
-        run: cmake --build build --config Release --parallel 4
-      - uses: actions/upload-artifact@v4
-        with:
-          name: LEVEL-Windows-VST3-UNSIGNED
-          path: build/Level_artefacts/Release/VST3/**
           if-no-files-found: error
