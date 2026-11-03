@@ -30,8 +30,8 @@ for TYPE in vstroot auroot approot;do
  mkdir -p "$DIST/$TYPE/Library/Application Support/Nativos Audio/Level"
  cp "$ROOT/Resources/Level-Manual.html" "$DIST/$TYPE/Library/Application Support/Nativos Audio/Level/"
 done
-pkgbuild --root "$DIST/vstroot" --identifier com.nativosaudio.level.vst3 --version 0.4.0 --install-location / "$DIST/Level-VST3.pkg"
-pkgbuild --root "$DIST/auroot" --identifier com.nativosaudio.level.au --version 0.4.0 --install-location / "$DIST/Level-AU.pkg"
-pkgbuild --root "$DIST/approot" --identifier com.nativosaudio.level.app --version 0.4.0 --install-location / "$DIST/Level-Standalone.pkg"
+pkgbuild --root "$DIST/vstroot" --identifier com.nativosaudio.level.vst3 --version 0.4.1 --install-location / "$DIST/Level-VST3.pkg"
+pkgbuild --root "$DIST/auroot" --identifier com.nativosaudio.level.au --version 0.4.1 --install-location / "$DIST/Level-AU.pkg"
+pkgbuild --root "$DIST/approot" --identifier com.nativosaudio.level.app --version 0.4.1 --install-location / "$DIST/Level-Standalone.pkg"
 (cd "$DIST" && productbuild --distribution "$ROOT/Packaging/mac/distribution.xml" --resources "$ROOT/Packaging/mac" --package-path "$DIST" Level-Mac-Universal-UNSIGNED.pkg)
 test -s "$DIST/Level-Mac-Universal-UNSIGNED.pkg"
