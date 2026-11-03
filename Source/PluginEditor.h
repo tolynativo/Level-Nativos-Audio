@@ -2,6 +2,7 @@
 #include "PluginProcessor.h"
 #include "RegionManager.h"
 #include "Spectrogram.h"
+#include "OfflineExport.h"
 #include <array>
 #include <memory>
 
@@ -32,6 +33,8 @@ private:
     juce::AudioThumbnail thumbnail{256, formatManager, thumbnailCache};
     level::RegionManager regions;
     LevelSpectrogram spectrogram;
+    LevelOfflineExport exporter;
+    juce::File importedAudio;
     bool hasImportedFile = false;
     float mouseDownX = -1.f;
     juce::String importedFilename;
@@ -46,7 +49,7 @@ private:
     juce::Label inputLabel, outputLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> inputAttachment, outputAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
-    juce::TextButton bypass{"BYPASS"}, settings{"SETTINGS"}, save{"SAVE"}, load{"LOAD"}, reset{"RESET"}, importButton{"IMPORT"};
+    juce::TextButton bypass{"BYPASS"}, settings{"SETTINGS"}, save{"SAVE"}, load{"LOAD"}, reset{"RESET"}, importButton{"IMPORT"}, exportButton{"EXPORT"};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LevelEditor)
 };
