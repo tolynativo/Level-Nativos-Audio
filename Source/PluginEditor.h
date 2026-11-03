@@ -27,7 +27,12 @@ private:
     double waveformTimeAt(float x) const;
 
     LevelProcessor& processor;
-    int selected = 3;
+    int selected = 0;
+    float zoom = 1.f, viewStart = 0.f;
+    bool spectrogramView = false;
+    juce::MemoryBlock slotA, slotB;
+    bool activeSlotB = false;
+    bool restoringSnapshot = false;
     juce::AudioFormatManager formatManager;
     juce::AudioThumbnailCache thumbnailCache{5};
     juce::AudioThumbnail thumbnail{256, formatManager, thumbnailCache};
@@ -40,16 +45,25 @@ private:
     juce::String importedFilename;
     std::array<juce::TextButton, 7> tabs;
     std::array<juce::TextButton, 7> switches;
-    std::array<juce::Slider, 2> moduleControls;
-    std::array<juce::Label, 2> moduleLabels;
-    std::array<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>, 2> moduleAttachments;
+    std::array<juce::Slider, 3> moduleControls;
+    std::array<juce::Label, 3> moduleLabels;
+    std::array<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>, 3> moduleAttachments;
     std::array<std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>, 7> switchAttachments;
 
     juce::Slider inputGain, outputGain;
     juce::Label inputLabel, outputLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> inputAttachment, outputAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
-    juce::TextButton bypass{"BYPASS"}, settings{"SETTINGS"}, save{"SAVE"}, load{"LOAD"}, reset{"RESET"}, importButton{"IMPORT"}, exportButton{"EXPORT"};
+    juce::TextButton bypass{"⏻ BYPASS"}, settings{"⚙"}, save{"▣"}, load{"▱"}, reset{"RESET"}, importButton{"IMPORT"}, exportButton{"EXPORT"};
+    juce::TextButton zoomIn{"+"}, zoomOut{"−"}, waveView{"WAVE"}, spectralView{"FFT"}, slotToggle{"A | B"};
+    juce::TextButton prevPreset{"<"}, nextPreset{">"}, undo{"↶"}, redo{"↷"}, play{"▶"}, help{"?"};
+    juce::Label presetName;
+    juce::ComboBox cleanMode;
+    juce::ToggleButton delta{"Delta"};
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> deltaAttachment;
+    void choosePreset(int delta);
+    juce::StringArray presetNames{"Default", "Gentle Clean", "Lowend Repair", "Soft Leveling", "De-ess"};
+    int presetIndex = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LevelEditor)
 };
