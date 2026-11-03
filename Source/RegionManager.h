@@ -65,6 +65,7 @@ public:
         return false;
     }
     void clear() noexcept { regions.clear(); }
+    void restore(const std::vector<AudioRegion>& previous) { regions=previous; sort(); }
 private:
     void sort() {
         std::stable_sort(regions.begin(), regions.end(), [](const auto& a, const auto& b) {
