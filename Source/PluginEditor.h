@@ -61,6 +61,15 @@ private:
     juce::ComboBox cleanMode;
     juce::ToggleButton delta{"Delta"};
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> deltaAttachment;
+    struct EditSnapshot {
+        juce::MemoryBlock parameters;
+        std::vector<level::AudioRegion> regions;
+    };
+    std::vector<EditSnapshot> past, future;
+    void captureUndo();
+    void undoEdit();
+    void redoEdit();
+    void restoreEdit(const EditSnapshot&);
     void choosePreset(int delta);
     juce::StringArray presetNames{"Default", "Gentle Clean", "Lowend Repair", "Soft Leveling", "De-ess"};
     int presetIndex = 0;
