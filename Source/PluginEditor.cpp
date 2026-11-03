@@ -750,3 +750,24 @@ void LevelEditor::mouseUp(const juce::MouseEvent& e)
     regions.add(waveformTimeAt(left), waveformTimeAt(right), type);
     repaint();
 }
+
+void LevelEditor::mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel)
+{
+    if(!waveformBounds().contains(e.position))
+    {
+        juce::AudioProcessorEditor::mouseWheelMove(e,wheel);
+        return;
+    }
+    if(e.mods.isCommandDown()||e.mods.isCtrlDown())
+    {
+        const float before=zoom;
+        zoom=juce::jlimit(1.f,12.f,zoom*std::pow(1.4f,wheel.deltaY*4.f));
+        const float fraction=juce::jlimit(0.f,1.f,
+             (e.position.x-waveformBounds().getX())/waveformBounds().getWidth());
+        viewStart=juce::jlimit(0.f,1.f-1.f/zoom,
+            viewStart+fraction*(1.f/before-1.f/zoom));
+    }
+    else
+        viewStart=juce::jlimit(0.f,1.f-1.f/zoom,viewStart-wheel.deltaY*.22f/zoom);
+    repaint();
+}
