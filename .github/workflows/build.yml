@@ -1,4 +1,4 @@
-name: Build LEVEL Mac Universal Installer
+name: Build LEVEL Mac Universal Installer and Standalone
 on:
   workflow_dispatch:
   push:
@@ -20,11 +20,13 @@ jobs:
         run: |
           set -o pipefail
           cmake --build build-mac --config Release --parallel 4 2>&1 | tee mac-build.log
-      - name: Verify both formats and architectures
+      - name: Run region manager tests
+        run: ctest --test-dir build-mac -C Release --output-on-failure
+      - name: Verify plugin formats and architectures
         shell: bash
         run: |
           set -euo pipefail
-          for extension in vst3 component; do
+          for extension in vst3 component app; do
             bundle="$(find build-mac -type d -name "Level.$extension" -print -quit)"
             test -n "$bundle"
             binary="$(find "$bundle/Contents/MacOS" -maxdepth 1 -type f | head -1)"
@@ -45,6 +47,7 @@ jobs:
           pkgutil --expand dist/Level-Mac-Universal-UNSIGNED.pkg dist/expanded
           grep -q 'choice="vst3"' dist/expanded/Distribution
           grep -q 'choice="au"' dist/expanded/Distribution
+          grep -q 'choice="app"' dist/expanded/Distribution
           echo 'Installer structure verified; package is unsigned.'
       - name: Upload diagnostics even when build fails
         if: always()
