@@ -76,7 +76,7 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
     inputAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(processor.state, "input", inputGain);
     outputAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(processor.state, "output", outputGain);
 
-    for (auto* button : { &bypass, &settings, &save, &load, &reset, &importButton })
+    for (auto* button : { &bypass, &settings, &save, &load, &reset, &importButton, &exportButton })
     {
         button->setColour(juce::TextButton::buttonColourId, panel);
         button->setColour(juce::TextButton::textColourOffId, text);
@@ -93,6 +93,30 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
             "*.wav;*.aif;*.aiff;*.flac");
         chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
             [this, chooser](const juce::FileChooser& selectedFile) { importFile(selectedFile.getResult()); });
+    };
+    exportButton.onClick = [this] {
+        if (!hasImportedFile || !importedAudio.existsAsFile())
+        {
+            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon, "LEVEL Export",
+                "Import a WAV, AIFF or FLAC recording before exporting.");
+            return;
+        }
+        if (exporter.currentStatus() == LevelOfflineExport::Status::Working) return;
+        auto chooser = std::make_shared<juce::FileChooser>("Export processed WAV",
+            importedAudio.getParentDirectory().getChildFile(importedAudio.getFileNameWithoutExtension() + "-LEVEL.wav"), "*.wav");
+        juce::Component::SafePointer<LevelEditor> safe(this);
+        chooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+            [safe, chooser](const juce::FileChooser& chosen) {
+                if (!safe) return;
+                auto output = chosen.getResult();
+                if (output == juce::File()) return;
+                if (!output.hasFileExtension(".wav")) output = output.withFileExtension(".wav");
+                juce::MemoryBlock stateSnapshot;
+                safe->processor.getStateInformation(stateSnapshot);
+                if (!safe->exporter.begin(safe->importedAudio, output, stateSnapshot, 24))
+                    juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                        "LEVEL Export", "Unable to start export. Check the source, destination and active jobs.");
+            });
     };
     reset.onClick = [this] {
         for (auto* param : processor.getParameters())
@@ -195,7 +219,8 @@ void LevelEditor::resized()
     inputLabel.setBounds(w - 335, 202, 125, 20);
     outputGain.setBounds(w - 205, controlTop, 125, 101);
     outputLabel.setBounds(w - 205, 202, 125, 20);
-    importButton.setBounds(16, h - 44, 166, 30);
+    importButton.setBounds(16, h - 44, 79, 30);
+    exportButton.setBounds(101, h - 44, 81, 30);
     const int y = 25;
     reset.setBounds(w - 482, y, 75, 34);
     load.setBounds(w - 400, y, 67, 34);
@@ -332,7 +357,11 @@ void LevelEditor::paint(juce::Graphics& g)
     drawMeter(w - 51.f, processor.meterOut.load(std::memory_order_relaxed), "OUT");
     g.setColour(muted);
     g.setFont(juce::Font(juce::FontOptions(12.f)));
-    g.drawText("LEVEL  •  NATIVOS AUDIO  •  DEVELOPMENT BUILD", 210, (int)h - 41, (int)w - 225, 22, juce::Justification::left);
+    const auto exportStatus = exporter.currentStatus();
+    const char* statusText = exportStatus == LevelOfflineExport::Status::Working ? "  |  EXPORTING WAV..." :
+                             exportStatus == LevelOfflineExport::Status::Complete ? "  |  WAV SAVED" :
+                             exportStatus == LevelOfflineExport::Status::Failed ? "  |  EXPORT ERROR" : "";
+    g.drawText(juce::String("LEVEL  •  NATIVOS AUDIO  •  DEVELOPMENT BUILD") + statusText, 210, (int)h - 41, (int)w - 225, 22, juce::Justification::left);
 }
 
 juce::AudioProcessorEditor* LevelProcessor::createEditor()
@@ -381,9 +410,11 @@ void LevelEditor::importFile(const juce::File& file)
     if (hasImportedFile) {
         spectrogram.analyse(file);
         importedFilename = file.getFileName();
+        importedAudio = file;
         regions.clear();
     } else {
         importedFilename.clear();
+        importedAudio = {};
         juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
             "LEVEL Import", "Unable to read the selected recording.");
     }
