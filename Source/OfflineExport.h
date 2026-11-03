@@ -45,16 +45,19 @@ private:
         if (out.existsAsFile() && !out.deleteFile()) {
             status.store(Status::Failed); return;
         }
-        auto stream = out.createOutputStream();
-        if (!stream || !stream->openedOk()) {
+        auto fileStream = out.createOutputStream();
+        if (!fileStream || !fileStream->openedOk()) {
             status.store(Status::Failed); return;
         }
+        std::unique_ptr<juce::OutputStream> stream = std::move(fileStream);
         juce::WavAudioFormat wav;
-        auto writer = std::unique_ptr<juce::AudioFormatWriter>(
-            wav.createWriterFor(stream.get(), reader->sampleRate,
-                                reader->numChannels, bitDepth, {}, 0));
+        const auto options = juce::AudioFormatWriter::Options{}
+            .withSampleRate(reader->sampleRate)
+            .withNumChannels((int)reader->numChannels)
+            .withBitsPerSample(bitDepth);
+        auto writer = wav.createWriterFor(stream, options);
         if (!writer) { status.store(Status::Failed); return; }
-        stream.release();  // Writer now owns the output stream.
+        // Successful creation transfers ownership of stream to the writer.
         constexpr int blockSize = 2048;
         juce::AudioBuffer<float> buffer((int)reader->numChannels, blockSize);
         juce::MidiBuffer midi;
