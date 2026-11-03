@@ -68,6 +68,10 @@ private:
         LevelProcessor engine;
         engine.setStateInformation(stateData.getData(), (int)stateData.getSize());
         engine.prepareToPlay(reader->sampleRate, blockSize);
+        const auto parameter = [&engine](const char* id) {
+            return engine.state.getRawParameterValue(id)->load(std::memory_order_relaxed);
+        };
+        const auto enabled = [&parameter](const char* id) { return parameter(id) > .5f; };
         juce::int64 offset = 0;
         bool ok = true;
         while (offset < reader->lengthInSamples && !threadShouldExit())
@@ -83,12 +87,36 @@ private:
             for (const auto& region : regionEdits)
             {
                 if (!region.enabled) continue;
+                // Regions only affect sound when their corresponding module is enabled.
+                // Breath and mouth clicks use manually selected positions, not fictional AI.
+                float gainDb=region.gainDb;
+                switch (region.type) {
+                    case level::RegionType::Breath:
+                        if (!enabled("breathOn")) continue;
+                        if (!region.userEdited) gainDb=parameter("breath");
+                        break;
+                    case level::RegionType::MouthNoise:
+                        if (!enabled("mouthOn")) continue;
+                        if (!region.userEdited) gainDb=-.24f*parameter("click");
+                        break;
+                    case level::RegionType::Sibilance:
+                        if (!enabled("sibilanceOn")) continue;
+                        if (!region.userEdited) gainDb=-.12f*parameter("deess");
+                        break;
+                    case level::RegionType::Plosive:
+                        if (!enabled("lowendOn")) continue;
+                        break;
+                    case level::RegionType::Pause:
+                        if (!enabled("gateOn")) continue;
+                        if (!region.userEdited) gainDb=parameter("reduction");
+                        break;
+                }
                 const auto first = (juce::int64)(region.startSeconds * reader->sampleRate);
                 const auto last = (juce::int64)(region.endSeconds * reader->sampleRate);
                 if (last <= offset || first >= offset + count) continue;
                 const int start = (int)juce::jmax((juce::int64)0, first - offset);
                 const int stop = (int)juce::jmin((juce::int64)count, last - offset);
-                const float targetGain = juce::Decibels::decibelsToGain(region.gainDb);
+                const float targetGain = juce::Decibels::decibelsToGain(gainDb);
                 const double fadeSamples = reader->sampleRate * 0.015;
                 for (int i = start; i < stop; ++i)
                 {
