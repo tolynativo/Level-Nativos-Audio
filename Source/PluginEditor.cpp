@@ -5,14 +5,14 @@ namespace
 {
 constexpr const char* names[] = { "CLEAN", "LOWEND", "GATE", "DYNAMICS", "BREATH", "SIBILANCE", "MOUTH NOISE" };
 constexpr const char* enableIds[] = { "cleanOn", "lowendOn", "gateOn", "dynamicsOn", "breathOn", "sibilanceOn", "mouthOn" };
-constexpr const char* ids[][2] = {
-    { "clean", "" }, { "cut", "body" }, { "threshold", "reduction" },
-    { "target", "speed" }, { "breath", "" }, { "deess", "" }, { "click", "" }
+constexpr const char* ids[][3] = {
+    { "clean", "cleanReverb", "cleanHighs" }, { "cut", "body", "" }, { "threshold", "reduction", "" },
+    { "target", "speed", "" }, { "breath", "", "" }, { "deess", "", "" }, { "click", "", "" }
 };
-constexpr const char* titles[][2] = {
-    { "CLEAN AMOUNT", "" }, { "LOW CUT", "BODY" }, { "THRESHOLD", "REDUCTION" },
-    { "TARGET LEVEL", "SPEED" }, { "BREATH LEVEL", "" },
-    { "DE-ESS AMOUNT", "" }, { "CLICK REDUCTION", "" }
+constexpr const char* titles[][3] = {
+    { "NOISE REDUCTION", "REVERB REDUCTION", "RECOVER HIGHS" }, { "LOW CUT", "BODY", "" }, { "THRESHOLD", "REDUCTION", "" },
+    { "TARGET LEVEL", "SPEED", "" }, { "BREATH LEVEL", "", "" },
+    { "DE-ESS AMOUNT", "", "" }, { "CLICK REDUCTION", "", "" }
 };
 const juce::Colour bg(0xff0b111a), panel(0xff131e2a), outline(0xff2c3b4a);
 const juce::Colour yellow(0xffddc466), text(0xffeef3f9), muted(0xff8295aa);
@@ -35,19 +35,19 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
 {
     formatManager.registerBasicFormats();
     setResizable(true, true);
-    setResizeLimits(960, 590, 1700, 1100);
-    setSize(1100, 670);
+    setResizeLimits(1120, 650, 1900, 1120);
+    setSize(1440, 800);
 
     for (int i = 0; i < 7; ++i)
     {
         auto& tab = tabs[(size_t)i];
-        tab.setButtonText(names[i]);
+        tab.setButtonText(juce::String(names[i]).toLowerCase());
         tab.onClick = [this, i] { select(i); };
         tab.setColour(juce::TextButton::textColourOffId, text);
         addAndMakeVisible(tab);
 
         auto& sw = switches[(size_t)i];
-        sw.setButtonText("ON");
+        sw.setButtonText("⏻");
         sw.setClickingTogglesState(true);
         sw.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff467861));
         sw.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff293442));
@@ -59,7 +59,7 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
         // but do not pretend a noisy amplitude heuristic is a working vocal tool.
         if (i == 4 || i == 6)
         {
-            sw.setButtonText("PENDING");
+            sw.setButtonText("—");
             sw.setEnabled(false);
             tab.setTooltip("Event detector not yet available; audio is passed through safely.");
         }
@@ -197,7 +197,84 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
                     "Automatic installer downloads are not enabled until a signed, validated release is available.");
         });
     };
-    select(3);
+    // Real toolbar actions. Host playback is intentionally not faked inside a VST.
+    for (auto* control : { &zoomIn, &zoomOut, &waveView, &spectralView,
+                            &slotToggle, &prevPreset, &nextPreset, &undo, &redo,
+                            &play, &help })
+    {
+        control->setColour(juce::TextButton::buttonColourId, panel);
+        control->setColour(juce::TextButton::textColourOffId, text);
+        addAndMakeVisible(*control);
+    }
+    undo.setEnabled(false);
+    redo.setEnabled(false);
+    undo.setTooltip("Edit history is not implemented yet.");
+    redo.setTooltip("Edit history is not implemented yet.");
+    play.setEnabled(false);
+    play.setTooltip("Play the timeline from your DAW; imported-file playback is not yet implemented.");
+    zoomIn.onClick = [this] { zoom = juce::jmin(12.f, zoom * 1.35f); viewStart = juce::jlimit(0.f, 1.f-1.f/zoom, viewStart); repaint(); };
+    zoomOut.onClick = [this] { zoom = juce::jmax(1.f, zoom / 1.35f); viewStart = juce::jlimit(0.f, 1.f-1.f/zoom, viewStart); repaint(); };
+    waveView.onClick = [this] { spectrogramView = false; repaint(); };
+    spectralView.onClick = [this] { spectrogramView = true; repaint(); };
+    prevPreset.onClick = [this] { choosePreset(-1); };
+    nextPreset.onClick = [this] { choosePreset(1); };
+    slotToggle.onClick = [this] {
+        if (!activeSlotB) {
+            processor.getStateInformation(slotA);
+            if (slotB.isEmpty()) slotB = slotA;
+            processor.setStateInformation(slotB.getData(), (int)slotB.getSize());
+        } else {
+            processor.getStateInformation(slotB);
+            processor.setStateInformation(slotA.getData(), (int)slotA.getSize());
+        }
+        activeSlotB = !activeSlotB;
+        slotToggle.setButtonText(activeSlotB ? "B | A" : "A | B");
+    };
+    presetName.setText("Default", juce::dontSendNotification);
+    presetName.setJustificationType(juce::Justification::centred);
+    presetName.setColour(juce::Label::textColourId, text);
+    addAndMakeVisible(presetName);
+    cleanMode.addItemList({"Gentle", "Balanced", "Strong"}, 1);
+    cleanMode.setSelectedId(2, juce::dontSendNotification);
+    cleanMode.onChange = [this] {
+        if (selected == 0) {
+            const float amounts[] = { 15.f, 35.f, 65.f };
+            const auto idx = juce::jlimit(0,2,cleanMode.getSelectedId()-1);
+            if (auto* p = processor.state.getParameter("clean"))
+                p->setValueNotifyingHost(p->convertTo0to1(amounts[idx]));
+        }
+    };
+    addAndMakeVisible(cleanMode);
+    deltaAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(processor.state, "delta", delta);
+    addAndMakeVisible(delta);
+    help.onClick = [this] { settings.triggerClick(); };
+    // The import/export functions remain real and are accessible through the
+    // toolbar file menu. No decorative placeholder controls.
+    load.setButtonText("▱");
+    save.setButtonText("▣");
+    settings.setButtonText("⚙");
+    reset.setVisible(false);
+    importButton.setVisible(false);
+    exportButton.setVisible(false);
+    settings.onClick = [this] {
+        juce::PopupMenu menu;
+        menu.addItem(1, "Import vocal file");
+        menu.addItem(2, "Export processed WAV");
+        menu.addItem(3, "Reset processing");
+        menu.addItem(4, "Manual / Settings");
+        menu.addItem(5, "Version: LEVEL v0.5 UI build", false, false);
+        juce::Component::SafePointer<LevelEditor> safe(this);
+        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&settings), [safe](int id) {
+            if (!safe) return;
+            if (id == 1) safe->importButton.triggerClick();
+            if (id == 2) safe->exportButton.triggerClick();
+            if (id == 3) safe->reset.triggerClick();
+            if (id == 4) juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon, "LEVEL",
+                "LEVEL development build. Save/load presets and import/export are available. "
+                "AI vocal event models, automatic dereverb and restore-highs are not installed.");
+        });
+    };
+    select(0);
     startTimerHz(20);
 }
 
@@ -211,7 +288,9 @@ void LevelEditor::select(int newSelection)
         const bool active = id.isNotEmpty();
         moduleControls[i].setVisible(active);
         moduleLabels[i].setVisible(active);
-        moduleControls[i].setEnabled(active && selected != 4 && selected != 6);
+        moduleControls[i].setEnabled(active && selected != 4 && selected != 6 && !(selected == 0 && i > 0));
+        if (selected == 0 && i > 0)
+            moduleControls[i].setTooltip("Requires validated spectral restoration engine; no DSP is connected yet.");
         if (selected == 4 || selected == 6)
             moduleControls[i].setTooltip("Pending validated breath / mouth-click detector.");
         if (active)
@@ -223,8 +302,25 @@ void LevelEditor::select(int newSelection)
     }
     for (int i = 0; i < 7; ++i)
         tabs[(size_t)i].setColour(juce::TextButton::buttonColourId,
-            i == selected ? juce::Colour(0xff536b78) : panel);
+            i == selected ? juce::Colour(0xff373027) : panel);
+    cleanMode.setVisible(selected == 0);
+    delta.setVisible(selected == 0);
     repaint();
+}
+
+void LevelEditor::choosePreset(int change)
+{
+    presetIndex = (presetIndex + change + presetNames.size()) % presetNames.size();
+    presetName.setText(presetNames[presetIndex], juce::dontSendNotification);
+    reset.triggerClick();
+    auto assign = [this](const char* id, float value) {
+        if (auto* p = processor.state.getParameter(id))
+            p->setValueNotifyingHost(p->convertTo0to1(value));
+    };
+    if (presetIndex == 1) { assign("cleanOn", 1.f); assign("clean", 20.f); }
+    if (presetIndex == 2) { assign("lowendOn", 1.f); assign("cut", 100.f); }
+    if (presetIndex == 3) { assign("dynamicsOn", 1.f); assign("target", -18.f); assign("speed", 650.f); }
+    if (presetIndex == 4) { assign("sibilanceOn", 1.f); assign("deess", 23.f); }
 }
 
 void LevelEditor::resized()
