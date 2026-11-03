@@ -17,6 +17,7 @@ public:
     void filesDropped(const juce::StringArray& files, int, int) override;
     void mouseDown(const juce::MouseEvent&) override;
     void mouseUp(const juce::MouseEvent&) override;
+    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
 
 private:
     void timerCallback() override { repaint(); }
