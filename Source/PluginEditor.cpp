@@ -152,7 +152,7 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
         menu.addItem(1, "Open Manual");
         menu.addItem(2, "Update status");
         menu.addSeparator();
-        menu.addItem(3, "LEVEL v0.3 development", false, false);
+        menu.addItem(3, "LEVEL v0.4 development", false, false);
         menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&settings), [](int selection) {
             if (selection == 1)
             {
