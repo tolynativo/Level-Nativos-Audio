@@ -102,20 +102,31 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
             return;
         }
         if (exporter.currentStatus() == LevelOfflineExport::Status::Working) return;
-        auto chooser = std::make_shared<juce::FileChooser>("Export processed WAV",
-            importedAudio.getParentDirectory().getChildFile(importedAudio.getFileNameWithoutExtension() + "-LEVEL.wav"), "*.wav");
+        juce::PopupMenu bits;
+        bits.addItem(16, "WAV 16-bit PCM");
+        bits.addItem(24, "WAV 24-bit PCM");
+        bits.addItem(32, "WAV 32-bit float");
         juce::Component::SafePointer<LevelEditor> safe(this);
-        chooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
-            [safe, chooser](const juce::FileChooser& chosen) {
-                if (!safe) return;
-                auto output = chosen.getResult();
-                if (output == juce::File()) return;
-                if (!output.hasFileExtension(".wav")) output = output.withFileExtension(".wav");
-                juce::MemoryBlock stateSnapshot;
-                safe->processor.getStateInformation(stateSnapshot);
-                if (!safe->exporter.begin(safe->importedAudio, output, stateSnapshot, 24))
-                    juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
-                        "LEVEL Export", "Unable to start export. Check the source, destination and active jobs.");
+        bits.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&exportButton),
+            [safe](int bitDepth) {
+                if (!safe || (bitDepth != 16 && bitDepth != 24 && bitDepth != 32)) return;
+                auto chooser = std::make_shared<juce::FileChooser>("Export processed WAV",
+                    safe->importedAudio.getParentDirectory().getChildFile(
+                        safe->importedAudio.getFileNameWithoutExtension() + "-LEVEL.wav"), "*.wav");
+                chooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+                    [safe, chooser, bitDepth](const juce::FileChooser& selected) {
+                        if (!safe) return;
+                        auto output = selected.getResult();
+                        if (output == juce::File()) return;
+                        if (!output.hasFileExtension(".wav")) output = output.withFileExtension(".wav");
+                        juce::MemoryBlock stateSnapshot;
+                        safe->processor.getStateInformation(stateSnapshot);
+                        auto regionSnapshot = safe->regions.all();
+                        if (!safe->exporter.begin(safe->importedAudio, output, stateSnapshot,
+                                                 std::move(regionSnapshot), bitDepth))
+                            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                                "LEVEL Export", "Unable to start export. Check the source, destination and active jobs.");
+                    });
             });
     };
     reset.onClick = [this] {
