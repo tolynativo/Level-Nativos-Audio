@@ -33,6 +33,16 @@ void LevelProcessor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuff
  juce::ScopedNoDenormals noDenormals;
  const auto n=audio.getNumSamples(), chans=audio.getNumChannels();
  if(n<=0||chans<=0){meterIn.store(0);meterOut.store(0);return;}
+ // Silence is real silence: do not leave the output meter illuminated when no input arrives.
+ bool silent=true;
+ for(int c=0;c<chans&&silent;++c)
+  for(int i=0;i<n;++i)if(audio.getReadPointer(c)[i]!=0.0f){silent=false;break;}
+ if(silent){
+  audio.clear();lows.fill(0);levelEnv.fill(0);gateEnv.fill(0);gateSmoothed.fill(1);prev.fill(0);
+  meterIn.store(0,std::memory_order_relaxed);meterOut.store(0,std::memory_order_relaxed);
+  for(int i=0;i<n;i+=32){auto pos=wavePos.fetch_add(1,std::memory_order_relaxed);wave[pos%waveLength].store(0,std::memory_order_relaxed);}
+  return;
+ }
  const auto val=[this](const char* id){return state.getRawParameterValue(id)->load();};
  const auto on=[&](const char* id){return val(id)>.5f;};
  const bool bypass=on("bypass");
