@@ -214,7 +214,7 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
         menu.addItem(1, "Open Manual");
         menu.addItem(2, "Update status");
         menu.addSeparator();
-        menu.addItem(3, "LEVEL v0.4.1 - DSP safety build", false, false);
+        menu.addItem(3, "LEVEL v0.5.0 - DSP safety build", false, false);
         menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&settings), [](int selection) {
             if (selection == 1)
             {
@@ -300,7 +300,7 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
         menu.addItem(2, "Export processed WAV");
         menu.addItem(3, "Reset processing");
         menu.addItem(4, "Manual / Settings");
-        menu.addItem(5, "Version: LEVEL v0.5 UI build", false, false);
+        menu.addItem(5, "Version: LEVEL v0.5.0 native UI build", false, false);
         juce::Component::SafePointer<LevelEditor> safe(this);
         menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&settings), [safe](int id) {
             if (!safe) return;
