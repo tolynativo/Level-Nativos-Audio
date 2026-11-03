@@ -16,6 +16,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout LevelProcessor::parameters()
  f(p,"threshold",-80,-15,-45);f(p,"reduction",-72,0,-36);
  f(p,"target",-36,-9,-18);f(p,"speed",50,1500,400);
  f(p,"breath",-18,0,-4);f(p,"deess",0,100,30);f(p,"click",0,100,25);
+ f(p,"cleanReverb",0,100,0);f(p,"cleanHighs",0,100,0);
+ p.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID{"delta",1},"Delta audition",false));
  return p;
 }
 LevelProcessor::LevelProcessor():AudioProcessor(BusesProperties().withInput("Input",juce::AudioChannelSet::stereo(),true).withOutput("Output",juce::AudioChannelSet::stereo(),true)),state(*this,nullptr,"State",parameters()){
@@ -42,6 +44,7 @@ void LevelProcessor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuff
  const auto val=[this](const char* id){return state.getRawParameterValue(id)->load(std::memory_order_relaxed);};
  const auto on=[&](const char* id){return val(id)>.5f;};
  const bool bypass=on("bypass");
+ const bool deltaMode=on("delta");
  const float targetInput=juce::Decibels::decibelsToGain(val("input"));
  const float targetOutput=juce::Decibels::decibelsToGain(val("output"));
  const float targetCut=juce::jlimit(20.f,250.f,val("cut"));
@@ -72,6 +75,7 @@ void LevelProcessor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuff
  float maxIn=0.f,maxOut=0.f;
  for(int i=0;i<n;++i){
   processingWet=fast*processingWet+(1.f-fast)*(bypass?0.f:1.f);
+  deltaSmoothed=fast*deltaSmoothed+(1.f-fast)*(deltaMode?1.f:0.f);
   inputSmoothed=control*inputSmoothed+(1.f-control)*targetInput;
   outputSmoothed=control*outputSmoothed+(1.f-control)*targetOutput;
   lowCutSmoothed=control*lowCutSmoothed+(1.f-control)*targetCut;
@@ -136,6 +140,8 @@ void LevelProcessor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuff
    v-=deessWet[k]*(1.f-deessGain[k])*hf;
    v*=outputSmoothed;
    v=raw+processingWet*(v-raw);
+   // Audition only removed/changed signal, crossfaded to avoid toggle clicks.
+   v=v-deltaSmoothed*raw;
    if(!std::isfinite(v))v=0.f;
    dest[i]=v;
    maxOut=juce::jmax(maxOut,std::abs(v));
