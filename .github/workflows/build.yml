@@ -5,9 +5,14 @@ on:
     branches: [main]
 permissions:
   contents: read
+# Allow any running Mac package build to finish without cancellation by another push.
+concurrency:
+  group: level-mac-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   mac-universal:
-    runs-on: macos-15
+    runs-on: macos-15-intel
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - name: Configure universal Mac VST3 and AU
