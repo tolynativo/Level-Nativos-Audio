@@ -24,6 +24,7 @@ public:
         source = input;
         startThread();
     }
+    float upperFrequencyHz() const noexcept { return upperFrequency.load(); }
     juce::Image getImage() const
     {
         const juce::ScopedLock lock(imageGuard);
@@ -43,6 +44,7 @@ private:
         juce::AudioBuffer<float> chunk(1, fftSize);
         juce::Image img(juce::Image::RGB, imageWidth, imageHeight, true);
         const float maxFreq = (float)juce::jmin(16000.0, reader->sampleRate * 0.49);
+        upperFrequency.store(maxFreq);
         if (maxFreq <= 200.f) return;
         for (int x = 0; x < imageWidth && !threadShouldExit(); ++x)
         {
@@ -79,4 +81,5 @@ private:
     juce::File source;
     mutable juce::CriticalSection imageGuard; // UI/analysis only; never in processBlock.
     juce::Image rendered;
+    std::atomic<float> upperFrequency{16000.f};
 };
