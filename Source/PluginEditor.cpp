@@ -55,6 +55,14 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
         addAndMakeVisible(sw);
         switchAttachments[(size_t)i] = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
             processor.state, enableIds[i], sw);
+        // These require a real event detector. Keep them visible as planned modules,
+        // but do not pretend a noisy amplitude heuristic is a working vocal tool.
+        if (i == 4 || i == 6)
+        {
+            sw.setButtonText("PENDING");
+            sw.setEnabled(false);
+            tab.setTooltip("Event detector not yet available; audio is passed through safely.");
+        }
     }
     for (size_t i = 0; i < moduleControls.size(); ++i)
     {
@@ -203,6 +211,9 @@ void LevelEditor::select(int newSelection)
         const bool active = id.isNotEmpty();
         moduleControls[i].setVisible(active);
         moduleLabels[i].setVisible(active);
+        moduleControls[i].setEnabled(active && selected != 4 && selected != 6);
+        if (selected == 4 || selected == 6)
+            moduleControls[i].setTooltip("Pending validated breath / mouth-click detector.");
         if (active)
         {
             moduleLabels[i].setText(titles[selected][i], juce::dontSendNotification);
