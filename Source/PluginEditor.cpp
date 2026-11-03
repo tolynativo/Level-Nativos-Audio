@@ -87,13 +87,10 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
         addAndMakeVisible(sw);
         switchAttachments[(size_t)i] = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
             processor.state, enableIds[i], sw);
-        // These require a real event detector. Keep them visible as planned modules,
-        // but do not pretend a noisy amplitude heuristic is a working vocal tool.
         if (i == 4 || i == 6)
         {
-            sw.setButtonText("—");
-            sw.setEnabled(false);
-            tab.setTooltip("Event detector not yet available; audio is passed through safely.");
+            sw.setTooltip("Manual regions only: drag across an imported recording, then Export WAV.");
+            tab.setTooltip("Select and edit regions manually. Automatic AI detection is not installed.");
         }
     }
     for (size_t i = 0; i < moduleControls.size(); ++i)
@@ -326,11 +323,11 @@ void LevelEditor::select(int newSelection)
         const bool active = id.isNotEmpty();
         moduleControls[i].setVisible(active);
         moduleLabels[i].setVisible(active);
-        moduleControls[i].setEnabled(active && selected != 4 && selected != 6 && !(selected == 0 && i > 0));
+        moduleControls[i].setEnabled(active && !(selected == 0 && i > 0));
         if (selected == 0 && i > 0)
             moduleControls[i].setTooltip("Requires validated spectral restoration engine; no DSP is connected yet.");
         if (selected == 4 || selected == 6)
-            moduleControls[i].setTooltip("Pending validated breath / mouth-click detector.");
+            moduleControls[i].setTooltip("Controls gain of manually selected regions when exporting WAV.");
         if (active)
         {
             moduleLabels[i].setText(titles[selected][i], juce::dontSendNotification);
@@ -614,9 +611,9 @@ void LevelEditor::paint(juce::Graphics& g)
         "Shape low-frequency rumble\nand unwanted proximity.",
         "Reduce level between\nvocal phrases.",
         "Smooth out changes\nin vocal loudness.",
-        "Requires vocal-event\ndetection model.",
+        "Mark breath regions, then\nrender with offline Export.",
         "Control excessive\nhigh-frequency energy.",
-        "Requires verified\nclick detection."
+        "Mark click regions, then\nrender with offline Export."
     };
     g.drawFittedText(desc[selected],43,(int)lowerY+62,206,72,juce::Justification::topLeft,3);
     g.setFont(juce::Font(juce::FontOptions(12.f)));
