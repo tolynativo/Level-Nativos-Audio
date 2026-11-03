@@ -1,4 +1,4 @@
-name: Build LEVEL Windows VST3
+name: Build LEVEL Windows x64
 on:
   workflow_dispatch:
   push:
@@ -6,16 +6,35 @@ on:
 permissions:
   contents: read
 jobs:
-  windows-vst3:
+  windows-x64:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - name: Configure
+        shell: pwsh
         run: cmake -S . -B build -A x64
-      - name: Compile
+      - name: Build VST3 and Standalone
+        shell: pwsh
         run: cmake --build build --config Release --parallel 4
+      - name: CTest region manager
+        shell: pwsh
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package unsigned test files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'dist/LEVEL-Windows-x64'
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          $vst = Get-ChildItem build -Recurse -Directory -Filter 'Level.vst3' | Select-Object -First 1
+          $app = Get-ChildItem build -Recurse -File -Filter 'Level.exe' |
+            Where-Object { $_.FullName -match 'Standalone' } | Select-Object -First 1
+          if (-not $vst -or -not $app) { throw 'Missing Release VST3 or Standalone output' }
+          Copy-Item -Recurse $vst.FullName (Join-Path $root 'Level.vst3')
+          Copy-Item $app.FullName (Join-Path $root 'Level.exe')
+          Copy-Item Resources/Level-Manual.html (Join-Path $root 'Level-Manual.html')
+          Compress-Archive -Path "$root/*" -DestinationPath 'dist/LEVEL-Windows-x64-UNSIGNED.zip' -Force
       - uses: actions/upload-artifact@v4
         with:
-          name: LEVEL-Windows-VST3-UNSIGNED
-          path: build/Level_artefacts/Release/VST3/**
+          name: LEVEL-Windows-x64-UNSIGNED-PORTABLE
+          path: dist/LEVEL-Windows-x64-UNSIGNED.zip
           if-no-files-found: error
