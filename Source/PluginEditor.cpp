@@ -410,53 +410,60 @@ void LevelEditor::choosePreset(int change)
 
 void LevelEditor::resized()
 {
-    const int w=getWidth(),h=getHeight();
+    const int w=1440,h=800;
+    const float scale=juce::jmin((float)getWidth()/1440.f,(float)getHeight()/800.f);
+    const auto bound=[scale](juce::Component& c,int x,int y,int width,int height) {
+        bound(c,juce::roundToInt(x*scale),juce::roundToInt(y*scale),
+                    juce::roundToInt(width*scale),juce::roundToInt(height*scale));
+    };
     const int rail=252, right=w-18;
     for(int i=0;i<7;++i)
     {
         const int y=140+i*59;
-        tabs[(size_t)i].setBounds(17,y,186,49);
-        switches[(size_t)i].setBounds(209,y+4,38,40);
+        bound(tabs[(size_t)i],17,y,186,49);
+        bound(switches[(size_t)i],209,y+4,38,40);
     }
     // The reference's header is implemented with functional JUCE buttons.
-    undo.setBounds(506,27,38,34);
-    redo.setBounds(546,27,38,34);
-    play.setBounds(600,27,40,34);
-    slotToggle.setBounds(659,27,67,34);
-    prevPreset.setBounds(748,27,35,34);
-    presetName.setBounds(785,27,166,34);
-    nextPreset.setBounds(956,27,35,34);
-    save.setBounds(w-350,27,38,34);
-    load.setBounds(w-304,27,38,34);
-    settings.setBounds(w-257,27,38,34);
-    help.setBounds(w-210,27,38,34);
-    bypass.setBounds(w-164,20,146,46);
+    bound(undo,506,27,38,34);
+    bound(redo,546,27,38,34);
+    bound(play,600,27,40,34);
+    bound(slotToggle,659,27,67,34);
+    bound(prevPreset,748,27,35,34);
+    bound(presetName,785,27,166,34);
+    bound(nextPreset,956,27,35,34);
+    bound(save,w-350,27,38,34);
+    bound(load,w-304,27,38,34);
+    bound(settings,w-257,27,38,34);
+    bound(help,w-210,27,38,34);
+    bound(bypass,w-164,20,146,46);
     const int controlsTop=h-205;
     for(int i=0;i<3;++i)
     {
         const int x=rail+200+i*185;
-        moduleControls[(size_t)i].setBounds(x,controlsTop+16,125,113);
-        moduleLabels[(size_t)i].setBounds(x-10,controlsTop+120,145,19);
+        bound(moduleControls[(size_t)i],x,controlsTop+16,125,113);
+        bound(moduleLabels[(size_t)i],x-10,controlsTop+120,145,19);
     }
-    delta.setBounds(w-452,controlsTop+51,96,40);
-    cleanMode.setBounds(w-272,controlsTop+76,202,31);
-    inputGain.setBounds(300,h-62,76,50);
-    outputGain.setBounds(w-156,h-62,76,50);
-    inputLabel.setBounds(312,h-23,75,16);
-    outputLabel.setBounds(w-144,h-23,75,16);
-    zoomOut.setBounds(w-167,118,34,33);
-    zoomIn.setBounds(w-126,118,34,33);
-    waveView.setBounds(w-330,118,67,33);
-    spectralView.setBounds(w-260,118,67,33);
+    bound(delta,w-452,controlsTop+51,96,40);
+    bound(cleanMode,w-272,controlsTop+76,202,31);
+    bound(inputGain,300,h-62,76,50);
+    bound(outputGain,w-156,h-62,76,50);
+    bound(inputLabel,312,h-23,75,16);
+    bound(outputLabel,w-144,h-23,75,16);
+    bound(zoomOut,w-167,118,34,33);
+    bound(zoomIn,w-126,118,34,33);
+    bound(waveView,w-330,118,67,33);
+    bound(spectralView,w-260,118,67,33);
     // File actions are accessible in Settings and do not clutter the reference UI.
-    importButton.setBounds(0,0,0,0);
-    exportButton.setBounds(0,0,0,0);
-    reset.setBounds(0,0,0,0);
+    bound(importButton,0,0,0,0);
+    bound(exportButton,0,0,0,0);
+    bound(reset,0,0,0,0);
 }
 
 void LevelEditor::paint(juce::Graphics& g)
 {
-    const float w=(float)getWidth(),h=(float)getHeight();
+    const float scale=juce::jmin((float)getWidth()/1440.f,(float)getHeight()/800.f);
+    g.addTransform(juce::AffineTransform::scale(scale));
+    const float w=1440.f,h=800.f;
     const juce::Colour background(0xff101114), panelBg(0xff191b20), panelHi(0xff202126);
     const juce::Colour gold(0xffffd02e), white(0xfff4f4f6), secondary(0xffb7bac1), darkLine(0xff36383e);
     g.fillAll(background);
@@ -653,7 +660,8 @@ juce::AudioProcessorEditor* LevelProcessor::createEditor()
 
 juce::Rectangle<float> LevelEditor::waveformBounds() const
 {
-    return { 261.f, 181.f, (float)getWidth()-279.f, (float)getHeight()-433.f };
+    const float scale=juce::jmin((float)getWidth()/1440.f,(float)getHeight()/800.f);
+    return { 261.f*scale,181.f*scale,1161.f*scale,367.f*scale };
 }
 
 double LevelEditor::waveformTimeAt(float x) const
