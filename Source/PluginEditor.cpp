@@ -99,12 +99,15 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
     for (size_t i = 0; i < moduleControls.size(); ++i)
     {
         configureSlider(moduleControls[i]);
+        moduleControls[i].onDragStart = [this] { captureUndo(); };
         moduleLabels[i].setJustificationType(juce::Justification::centred);
         moduleLabels[i].setColour(juce::Label::textColourId, muted);
         addAndMakeVisible(moduleLabels[i]);
     }
     configureSlider(inputGain);
     configureSlider(outputGain);
+    inputGain.onDragStart = [this] { captureUndo(); };
+    outputGain.onDragStart = [this] { captureUndo(); };
     for (auto* label : { &inputLabel, &outputLabel })
     {
         label->setJustificationType(juce::Justification::centred);
@@ -171,6 +174,7 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
             });
     };
     reset.onClick = [this] {
+        captureUndo();
         for (auto* param : processor.getParameters())
             if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*>(param))
                 ranged->setValueNotifyingHost(ranged->getDefaultValue());
@@ -199,8 +203,10 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
             [safe, chooser](const juce::FileChooser& fileChooser) {
                 if (!safe) return;
                 juce::MemoryBlock data;
-                if (fileChooser.getResult().loadFileAsData(data))
+                if (fileChooser.getResult().loadFileAsData(data)) {
+                    safe->captureUndo();
                     safe->processor.setStateInformation(data.getData(), (int)data.getSize());
+                }
             });
     };
     settings.onClick = [this] {
@@ -240,8 +246,8 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
     }
     undo.setEnabled(false);
     redo.setEnabled(false);
-    undo.setTooltip("Edit history is not implemented yet.");
-    redo.setTooltip("Edit history is not implemented yet.");
+    undo.onClick = [this] { undoEdit(); };
+    redo.onClick = [this] { redoEdit(); };
     play.setEnabled(false);
     play.setTooltip("Play the timeline from your DAW; imported-file playback is not yet implemented.");
     zoomIn.onClick = [this] { zoom = juce::jmin(12.f, zoom * 1.35f); viewStart = juce::jlimit(0.f, 1.f-1.f/zoom, viewStart); repaint(); };
@@ -338,6 +344,53 @@ void LevelEditor::select(int newSelection)
     cleanMode.setVisible(selected == 0);
     delta.setVisible(selected == 0);
     repaint();
+}
+
+void LevelEditor::captureUndo()
+{
+    EditSnapshot snapshot;
+    processor.getStateInformation(snapshot.parameters);
+    snapshot.regions=regions.all();
+    past.push_back(std::move(snapshot));
+    if(past.size()>64)past.erase(past.begin());
+    future.clear();
+    undo.setEnabled(true);
+    redo.setEnabled(false);
+}
+
+void LevelEditor::restoreEdit(const EditSnapshot& snapshot)
+{
+    processor.setStateInformation(snapshot.parameters.getData(),(int)snapshot.parameters.getSize());
+    regions.restore(snapshot.regions);
+    repaint();
+}
+
+void LevelEditor::undoEdit()
+{
+    if(past.empty())return;
+    EditSnapshot current;
+    processor.getStateInformation(current.parameters);
+    current.regions=regions.all();
+    future.push_back(std::move(current));
+    auto previous=std::move(past.back());
+    past.pop_back();
+    restoreEdit(previous);
+    undo.setEnabled(!past.empty());
+    redo.setEnabled(true);
+}
+
+void LevelEditor::redoEdit()
+{
+    if(future.empty())return;
+    EditSnapshot current;
+    processor.getStateInformation(current.parameters);
+    current.regions=regions.all();
+    past.push_back(std::move(current));
+    auto next=std::move(future.back());
+    future.pop_back();
+    restoreEdit(next);
+    undo.setEnabled(true);
+    redo.setEnabled(!future.empty());
 }
 
 void LevelEditor::choosePreset(int change)
@@ -661,6 +714,7 @@ void LevelEditor::mouseDown(const juce::MouseEvent& e)
         for (const auto& region : regions.all())
             if (seconds >= region.startSeconds && seconds <= region.endSeconds)
             {
+                captureUndo();
                 regions.erase(region.id);
                 repaint();
                 break;
@@ -687,6 +741,7 @@ void LevelEditor::mouseUp(const juce::MouseEvent& e)
         case 6: type = level::RegionType::MouthNoise; break;
         default: return;
     }
+    captureUndo();
     regions.add(waveformTimeAt(left), waveformTimeAt(right), type);
     repaint();
 }
