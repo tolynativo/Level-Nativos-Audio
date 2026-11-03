@@ -30,7 +30,13 @@ public:
  static juce::AudioProcessorValueTreeState::ParameterLayout parameters();
 private:
  double sampleRateHz=44100;
+ // DSP histories are allocated up-front; the audio callback never allocates or locks.
  std::array<float,2> lows{},levelEnv{},gateEnv{},gateSmoothed{},prev{};
+ std::array<float,2> cleanEnv{}, cleanGain{{1.f,1.f}}, dynamicsGain{{1.f,1.f}};
+ std::array<float,2> deessLow{}, deessEnv{}, deessGain{{1.f,1.f}};
+ std::array<float,2> lowendWet{}, cleanWet{}, gateWet{}, dynamicsWet{}, deessWet{};
+ float inputSmoothed = 1.f, outputSmoothed = 1.f;
+ float lowCutSmoothed = 75.f, bodySmoothed = 0.f;
  unsigned downsample=0;
  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LevelProcessor)
 };
