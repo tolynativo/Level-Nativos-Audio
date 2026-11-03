@@ -31,7 +31,7 @@ void LevelProcessor::prepareToPlay(double sr,int){
  deessLow.fill(0.f); deessEnv.fill(0.f); deessGain.fill(1.f);
  lowendWet.fill(0.f); cleanWet.fill(0.f); gateWet.fill(0.f);
  dynamicsWet.fill(0.f); deessWet.fill(0.f);
- inputSmoothed=1.f; outputSmoothed=1.f; lowCutSmoothed=75.f; bodySmoothed=0.f;
+ inputSmoothed=1.f; outputSmoothed=1.f; processingWet=1.f; lowCutSmoothed=75.f; bodySmoothed=0.f;
  downsample=0;
  meterIn.store(0.f);meterOut.store(0.f);
 }
@@ -62,15 +62,16 @@ void LevelProcessor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuff
  const float deessAttack=coeff(3.f), deessRelease=coeff(85.f);
  const float maxBoost=juce::Decibels::decibelsToGain(6.f);
  const float maxCut=juce::Decibels::decibelsToGain(-9.f);
- const float cleanTarget=bypass?0.f:(on("cleanOn")?1.f:0.f);
- const float lowTarget=bypass?0.f:(on("lowendOn")?1.f:0.f);
- const float gateTarget=bypass?0.f:(on("gateOn")?1.f:0.f);
- const float dynTarget=bypass?0.f:(on("dynamicsOn")?1.f:0.f);
- const float deessTarget=bypass?0.f:(on("sibilanceOn")?1.f:0.f);
+ const float cleanTarget=on("cleanOn")?1.f:0.f;
+ const float lowTarget=on("lowendOn")?1.f:0.f;
+ const float gateTarget=on("gateOn")?1.f:0.f;
+ const float dynTarget=on("dynamicsOn")?1.f:0.f;
+ const float deessTarget=on("sibilanceOn")?1.f:0.f;
  // Breath and Mouth Noise require reliable event detection. Do not fabricate it
  // by modifying every quiet sample or abrupt transient; those old rules damaged speech.
  float maxIn=0.f,maxOut=0.f;
  for(int i=0;i<n;++i){
+  processingWet=fast*processingWet+(1.f-fast)*(bypass?0.f:1.f);
   inputSmoothed=control*inputSmoothed+(1.f-control)*targetInput;
   outputSmoothed=control*outputSmoothed+(1.f-control)*targetOutput;
   lowCutSmoothed=control*lowCutSmoothed+(1.f-control)*targetCut;
@@ -88,7 +89,7 @@ void LevelProcessor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuff
    move(lowendWet[k],lowTarget); move(cleanWet[k],cleanTarget);
    move(gateWet[k],gateTarget);move(dynamicsWet[k],dynTarget);move(deessWet[k],deessTarget);
    float v=raw;
-   if(!bypass) v*=inputSmoothed;
+   v*=inputSmoothed;
    // Lowend: first-order high-pass plus a separate smooth low-body shelf.
    // At BODY=0 dB the low-pass component is not boosted back into the HP path.
    lows[k]=hpAlpha*lows[k]+(1.f-hpAlpha)*v;
@@ -133,7 +134,8 @@ void LevelProcessor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuff
    const float essAim=1.f-.65f*deessAmount*trigger;
    move(deessGain[k],essAim);
    v-=deessWet[k]*(1.f-deessGain[k])*hf;
-   if(!bypass) v*=outputSmoothed;
+   v*=outputSmoothed;
+   v=raw+processingWet*(v-raw);
    if(!std::isfinite(v))v=0.f;
    dest[i]=v;
    maxOut=juce::jmax(maxOut,std::abs(v));
