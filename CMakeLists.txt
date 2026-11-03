@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(LevelNativosAudio VERSION 0.4.0 LANGUAGES C CXX)
+project(LevelNativosAudio VERSION 0.4.1 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
@@ -38,7 +38,7 @@ add_test(NAME LevelRegionTests COMMAND LevelRegionTests)
 
 set(CPACK_PACKAGE_NAME "LEVEL-Nativos-Audio")
 set(CPACK_PACKAGE_VENDOR "Nativos Audio")
-set(CPACK_PACKAGE_VERSION "0.4.0")
+set(CPACK_PACKAGE_VERSION "0.4.1")
 set(CPACK_SOURCE_GENERATOR "ZIP")
 include(CPack)
 
