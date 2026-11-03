@@ -413,7 +413,7 @@ void LevelEditor::resized()
     const int w=1440,h=800;
     const float scale=juce::jmin((float)getWidth()/1440.f,(float)getHeight()/800.f);
     const auto bound=[scale](juce::Component& c,int x,int y,int width,int height) {
-        bound(c,juce::roundToInt(x*scale),juce::roundToInt(y*scale),
+        c.setBounds(juce::roundToInt(x*scale),juce::roundToInt(y*scale),
                     juce::roundToInt(width*scale),juce::roundToInt(height*scale));
     };
     const int rail=252, right=w-18;
