@@ -176,7 +176,7 @@ LevelEditor::LevelEditor(LevelProcessor& p) : AudioProcessorEditor(&p), processo
         menu.addItem(1, "Open Manual");
         menu.addItem(2, "Update status");
         menu.addSeparator();
-        menu.addItem(3, "LEVEL v0.4 development", false, false);
+        menu.addItem(3, "LEVEL v0.4.1 - DSP safety build", false, false);
         menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&settings), [](int selection) {
             if (selection == 1)
             {
@@ -389,7 +389,7 @@ void LevelEditor::paint(juce::Graphics& g)
     const char* statusText = exportStatus == LevelOfflineExport::Status::Working ? "  |  EXPORTING WAV..." :
                              exportStatus == LevelOfflineExport::Status::Complete ? "  |  WAV SAVED" :
                              exportStatus == LevelOfflineExport::Status::Failed ? "  |  EXPORT ERROR" : "";
-    g.drawText(juce::String("LEVEL  •  NATIVOS AUDIO  •  DEVELOPMENT BUILD") + statusText, 210, (int)h - 41, (int)w - 225, 22, juce::Justification::left);
+    g.drawText(juce::String("LEVEL v0.4.1  •  NATIVOS AUDIO  •  DSP SAFETY BUILD") + statusText, 210, (int)h - 41, (int)w - 225, 22, juce::Justification::left);
 }
 
 juce::AudioProcessorEditor* LevelProcessor::createEditor()
