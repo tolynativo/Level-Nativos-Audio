@@ -56,12 +56,12 @@ void LevelProcessor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuff
  const auto coeff=[fs](float ms){return std::exp(-1.f/(fs*ms*.001f));};
  const float fast=coeff(12.f), control=coeff(25.f);
  const float attack=coeff(5.f), release=coeff(130.f);
- const float gateAttack=coeff(8.f), gateRelease=coeff(110.f);
+ const float gateAttack=coeff(12.f), gateRelease=coeff(180.f);
  const float cleanRelease=coeff(200.f);
- const float levAttack=coeff(30.f), levRelease=coeff(speedMs);
+ const float levAttack=coeff(45.f), levRelease=coeff(juce::jmax(250.f,speedMs));
  const float deessAttack=coeff(3.f), deessRelease=coeff(85.f);
- const float maxBoost=juce::Decibels::decibelsToGain(6.f);
- const float maxCut=juce::Decibels::decibelsToGain(-9.f);
+ const float maxBoost=juce::Decibels::decibelsToGain(3.f);
+ const float maxCut=juce::Decibels::decibelsToGain(-6.f);
  const float cleanTarget=on("cleanOn")?1.f:0.f;
  const float lowTarget=on("lowendOn")?1.f:0.f;
  const float gateTarget=on("gateOn")?1.f:0.f;
