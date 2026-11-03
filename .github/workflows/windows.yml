@@ -1,0 +1,21 @@
+name: Build LEVEL Windows VST3
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  windows-vst3:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -A x64
+      - name: Compile
+        run: cmake --build build --config Release --parallel 4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LEVEL-Windows-VST3-UNSIGNED
+          path: build/Level_artefacts/Release/VST3/**
+          if-no-files-found: error
