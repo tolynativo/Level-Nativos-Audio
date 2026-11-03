@@ -431,7 +431,7 @@ void LevelEditor::importFile(const juce::File& file)
         regions.clear();
     } else {
         importedFilename.clear();
-        importedAudio = {};
+        importedAudio = juce::File();
         juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
             "LEVEL Import", "Unable to read the selected recording.");
     }
