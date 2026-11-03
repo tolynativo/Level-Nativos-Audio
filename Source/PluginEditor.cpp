@@ -325,167 +325,240 @@ void LevelEditor::choosePreset(int change)
 
 void LevelEditor::resized()
 {
-    const int w = getWidth(), h = getHeight();
-    for (int i = 0; i < 7; ++i)
+    const int w=getWidth(),h=getHeight();
+    const int rail=252, right=w-18;
+    for(int i=0;i<7;++i)
     {
-        const int y = 98 + i * 65;
-        tabs[(size_t)i].setBounds(16, y, 125, 43);
-        switches[(size_t)i].setBounds(146, y + 5, 37, 32);
+        const int y=140+i*59;
+        tabs[(size_t)i].setBounds(17,y,186,49);
+        switches[(size_t)i].setBounds(209,y+4,38,40);
     }
-    const int controlTop = 100;
-    for (int i = 0; i < 2; ++i)
+    // The reference's header is implemented with functional JUCE buttons.
+    undo.setBounds(506,27,38,34);
+    redo.setBounds(546,27,38,34);
+    play.setBounds(600,27,40,34);
+    slotToggle.setBounds(659,27,67,34);
+    prevPreset.setBounds(748,27,35,34);
+    presetName.setBounds(785,27,166,34);
+    nextPreset.setBounds(956,27,35,34);
+    save.setBounds(w-350,27,38,34);
+    load.setBounds(w-304,27,38,34);
+    settings.setBounds(w-257,27,38,34);
+    help.setBounds(w-210,27,38,34);
+    bypass.setBounds(w-164,20,146,46);
+    const int controlsTop=h-205;
+    for(int i=0;i<3;++i)
     {
-        moduleControls[(size_t)i].setBounds(215 + 148 * i, controlTop, 130, 102);
-        moduleLabels[(size_t)i].setBounds(215 + 148 * i, 202, 130, 20);
+        const int x=rail+200+i*185;
+        moduleControls[(size_t)i].setBounds(x,controlsTop+16,125,113);
+        moduleLabels[(size_t)i].setBounds(x-10,controlsTop+120,145,19);
     }
-    inputGain.setBounds(w - 335, controlTop, 125, 101);
-    inputLabel.setBounds(w - 335, 202, 125, 20);
-    outputGain.setBounds(w - 205, controlTop, 125, 101);
-    outputLabel.setBounds(w - 205, 202, 125, 20);
-    importButton.setBounds(16, h - 44, 79, 30);
-    exportButton.setBounds(101, h - 44, 81, 30);
-    const int y = 25;
-    reset.setBounds(w - 482, y, 75, 34);
-    load.setBounds(w - 400, y, 67, 34);
-    save.setBounds(w - 325, y, 67, 34);
-    settings.setBounds(w - 251, y, 109, 34);
-    bypass.setBounds(w - 135, y, 113, 34);
-    (void)h;
+    delta.setBounds(w-452,controlsTop+51,96,40);
+    cleanMode.setBounds(w-272,controlsTop+76,202,31);
+    inputGain.setBounds(300,h-62,76,50);
+    outputGain.setBounds(w-156,h-62,76,50);
+    inputLabel.setBounds(312,h-23,75,16);
+    outputLabel.setBounds(w-144,h-23,75,16);
+    zoomOut.setBounds(w-167,118,34,33);
+    zoomIn.setBounds(w-126,118,34,33);
+    waveView.setBounds(w-330,118,67,33);
+    spectralView.setBounds(w-260,118,67,33);
+    // File actions are accessible in Settings and do not clutter the reference UI.
+    importButton.setBounds(0,0,0,0);
+    exportButton.setBounds(0,0,0,0);
+    reset.setBounds(0,0,0,0);
 }
 
 void LevelEditor::paint(juce::Graphics& g)
 {
-    const float w = (float)getWidth(), h = (float)getHeight();
-    g.fillAll(bg);
-    g.setColour(text);
-    g.setFont(juce::Font(juce::FontOptions(26.f, juce::Font::bold)));
-    g.drawText("LEVEL", 207, 12, 240, 40, juce::Justification::left);
-    g.setColour(yellow);
-    g.setFont(juce::Font(juce::FontOptions(14.f, juce::Font::bold)));
-    g.drawText("NATIVOS AUDIO", 16, 12, 172, 23, juce::Justification::left);
-    g.setFont(juce::Font(juce::FontOptions(12.f)));
-    g.drawText("by Yai y Toly", 16, 35, 164, 25, juce::Justification::left);
-    g.setColour(muted);
+    const float w=(float)getWidth(),h=(float)getHeight();
+    const juce::Colour background(0xff101114), panelBg(0xff191b20), panelHi(0xff202126);
+    const juce::Colour gold(0xffffd02e), white(0xfff4f4f6), secondary(0xffb7bac1), darkLine(0xff36383e);
+    g.fillAll(background);
+    // Top shadow and header.
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff1e2025),0,0,background,0,112,false));
+    g.fillRect(0,0,getWidth(),110);
+    g.setColour(gold);
+    // Graphic mark: drawn vectorially, not a raster screenshot.
+    juce::Path mark;
+    mark.startNewSubPath(88.f,19.f);mark.lineTo(88.f,63.f);
+    mark.lineTo(112.f,38.f);mark.lineTo(112.f,63.f);
+    g.strokePath(mark,juce::PathStrokeType(4.f));
+    g.drawLine(93.f,17.f,116.f,44.f,3.f);
+    g.setFont(juce::Font(juce::FontOptions(15.f,juce::Font::bold)));
+    g.setColour(white);g.drawText("N A T I V O S  A U D I O",21,69,194,17,juce::Justification::centred);
+    g.setFont(juce::Font(juce::FontOptions(9.f)));
+    g.drawText("B Y   Y A I   Y   T O L Y",34,88,172,16,juce::Justification::centred);
+    g.setColour(gold);g.fillRect(217,26,2,55);
+    g.setColour(white);
+    g.setFont(juce::Font(juce::FontOptions(39.f,juce::Font::bold)));
+    g.drawText("L E V E L",257,17,240,49,juce::Justification::left);
     g.setFont(juce::Font(juce::FontOptions(11.f)));
-    g.drawText("VOCAL PROCESSING", 208, 50, 240, 20, juce::Justification::left);
-
-    g.setColour(outline);
-    g.drawLine(194.f, 78.f, 194.f, h - 26.f);
-    g.setColour(panel);
-    g.fillRoundedRectangle(202.f, 88.f, w - 220.f, 150.f, 10.f);
-    g.setColour(yellow);
-    g.setFont(juce::Font(juce::FontOptions(12.f, juce::Font::bold)));
-    g.drawText(juce::String(names[selected]) + "  •  CONTROLS", 216, 86, 380, 22, juce::Justification::left);
-
-    const float x = 202.f, y = 249.f, graphWidth = w - 308.f, graphHeight = h - 307.f;
-    g.setColour(panel);
-    g.fillRoundedRectangle(x, y, graphWidth, graphHeight, 10.f);
-    g.setColour(outline);
-    g.drawRoundedRectangle(x, y, graphWidth, graphHeight, 10.f, 1.0f);
-    g.setColour(juce::Colour(0xff263746));
-    for (int row = 1; row < 6; ++row)
+    g.drawText("A I   V O C A L   A S S I S T A N T",259,68,250,21,juce::Justification::left);
+    // Approved left module rail.
+    const juce::Colour dots[]={juce::Colour(0xffffd02e),juce::Colour(0xffff9f29),
+        juce::Colour(0xffff5f63),juce::Colour(0xffb677df),juce::Colour(0xff5d9ddd),
+        juce::Colour(0xff67ca72),juce::Colour(0xff53c8bf)};
+    for(int i=0;i<7;++i)
     {
-        float gy = y + graphHeight * (float)row / 6.f;
-        g.drawLine(x + 4.f, gy, x + graphWidth - 4.f, gy, 0.8f);
+        const int yy=140+i*59;
+        g.setColour(dots[i]);g.fillEllipse(28.f,(float)yy+20.f,11.f,11.f);
+        if(selected==i){g.setColour(gold);g.drawRoundedRectangle(18.f,(float)yy+1.f,227.f,47.f,11.f,1.4f);}
     }
-    for (int col = 1; col < 12; ++col)
+    // Analysis header above real waveform/spectrogram.
+    g.setColour(juce::Colour(0xff22242a));
+    g.fillRoundedRectangle(261.f,108.f,w-278.f,59.f,9.f);
+    g.setColour(darkLine);
+    g.drawLine(514.f,121.f,514.f,158.f);
+    g.drawLine(757.f,121.f,757.f,158.f);
+    g.drawLine(1010.f,121.f,1010.f,158.f);
+    const char* topLabels[]={"NOISE REDUCTION","REVERB REDUCTION","RECOVER HIGHS","PROCESSING"};
+    const float xs[]={278.f,530.f,772.f,1026.f};
+    const float widths[]={220.f,216.f,220.f,175.f};
+    g.setFont(juce::Font(juce::FontOptions(12.f)));
+    for(int i=0;i<4;++i){g.setColour(white);g.drawText(topLabels[i],(int)xs[i],110,(int)widths[i],18,juce::Justification::centred);}
+    const auto paramValue=[this](const char* id){return processor.state.getRawParameterValue(id)->load();};
+    const bool cleanOn=paramValue("cleanOn")>.5f;
+    g.setFont(juce::Font(juce::FontOptions(15.f,juce::Font::bold)));
+    g.setColour(gold);
+    g.drawText(juce::String(juce::roundToInt(paramValue("clean")))+"%",278,131,220,24,juce::Justification::centred);
+    g.setColour(secondary);
+    g.drawText("NOT AVAILABLE",530,131,216,24,juce::Justification::centred);
+    g.drawText("NOT AVAILABLE",772,131,220,24,juce::Justification::centred);
+    g.setColour(cleanOn?gold:secondary);
+    g.drawText(cleanOn?"On":"Off",1026,131,175,24,juce::Justification::centred);
+    // Import and live input are both drawn from actual samples, not canned waveforms.
+    const auto waveArea=waveformBounds();
+    g.setColour(juce::Colour(0xff0d0f13));
+    g.fillRoundedRectangle(waveArea.expanded(3.f),9.f);
+    g.setColour(juce::Colour(0xff2e3035));
+    g.drawRoundedRectangle(waveArea.expanded(3.f),9.f,1.f);
+    g.setColour(juce::Colour(0xff292b30));
+    for(int i=1;i<8;++i)
     {
-        float gx = x + graphWidth * (float)col / 12.f;
-        g.drawLine(gx, y + 3.f, gx, y + graphHeight - 3.f, 0.7f);
+        const float x=waveArea.getX()+waveArea.getWidth()*(float)i/8.f;
+        g.drawVerticalLine((int)x,waveArea.getY(),waveArea.getBottom());
     }
-
-    // Imported file waveform is generated by JUCE AudioThumbnail asynchronously.
-    if (hasImportedFile && thumbnail.getTotalLength() > 0.0)
+    for(int i=1;i<4;++i)
     {
-        g.setColour(juce::Colour(0xffe5dec7)); // Approved cream waveform colour.
-        thumbnail.drawChannels(g,
-            waveformBounds().toNearestInt(),
-            0.0, thumbnail.getTotalLength(),
-            0.86f);
+        const float y=waveArea.getY()+waveArea.getHeight()*(float)i/4.f;
+        g.drawHorizontalLine((int)y,waveArea.getX(),waveArea.getRight());
+    }
+    const double length=thumbnail.getTotalLength();
+    if(hasImportedFile&&length>0.0)
+    {
+        const double start=length*viewStart;
+        const double end=juce::jmin(length,start+length/(double)zoom);
+        if(spectrogramView)
+        {
+            if(auto image=spectrogram.getImage();image.isValid())
+                g.drawImage(image,waveArea,juce::RectanglePlacement::stretchToFit);
+            else {g.setColour(secondary);g.drawText("SPECTROGRAM ANALYZING",waveArea.toNearestInt(),juce::Justification::centred);}
+        }
+        else
+        {
+            g.setColour(juce::Colour(0xffaeb0b5));
+            thumbnail.drawChannels(g,waveArea.toNearestInt(),start,end,.84f);
+        }
+        for(const auto& region:regions.all())
+        {
+            const float left=waveArea.getX()+(float)((region.startSeconds-start)/(end-start))*waveArea.getWidth();
+            const float right=waveArea.getX()+(float)((region.endSeconds-start)/(end-start))*waveArea.getWidth();
+            const float l=juce::jlimit(waveArea.getX(),waveArea.getRight(),left);
+            const float r=juce::jlimit(waveArea.getX(),waveArea.getRight(),right);
+            if(r<=l)continue;
+            g.setColour(gold.withAlpha(.2f));g.fillRect(l,waveArea.getY(),r-l,waveArea.getHeight());
+            g.setColour(gold.withAlpha(.85f));g.drawVerticalLine((int)l,waveArea.getY(),waveArea.getBottom());
+            g.drawVerticalLine((int)r,waveArea.getY(),waveArea.getBottom());
+        }
+        g.setColour(secondary);
+        g.setFont(juce::Font(juce::FontOptions(10.f)));
+        for(int i=0;i<7;++i)
+        {
+            const double sec=start+(end-start)*(double)i/6.0;
+            const int minute=(int)sec/60, second=(int)sec%60;
+            g.drawText(juce::String(minute)+":"+(second<10?"0":"")+juce::String(second),
+                       (int)(waveArea.getX()+waveArea.getWidth()*i/6.f)-15,(int)waveArea.getBottom()+5,
+                       48,18,juce::Justification::left);
+        }
     }
     else
     {
-    // Live input is still available when no recording has been imported.
-    juce::Path upper, lower;
-    const auto total = LevelProcessor::waveLength;
-    const auto current = processor.wavePos.load(std::memory_order_relaxed);
-    int points = juce::jmax(1, (int)graphWidth - 24);
-    for (int i = 0; i < points; ++i)
-    {
-        const unsigned offset = (unsigned)((points - i) * (int)total / points);
-        const auto index = (current + (unsigned)total - 1u - offset) % (unsigned)total;
-        const float sample = processor.wave[index].load(std::memory_order_relaxed);
-        const float amp = juce::jlimit(0.f, graphHeight * .43f, std::abs(sample) * graphHeight * 2.f);
-        const float xx = x + 12.f + (float)i;
-        if (i == 0) { upper.startNewSubPath(xx, y + graphHeight * .5f - amp); lower.startNewSubPath(xx, y + graphHeight * .5f + amp); }
-        else { upper.lineTo(xx, y + graphHeight * .5f - amp); lower.lineTo(xx, y + graphHeight * .5f + amp); }
-    }
-    g.setColour(yellow.withAlpha(.88f));
-    g.strokePath(upper, juce::PathStrokeType(1.3f));
-    g.strokePath(lower, juce::PathStrokeType(1.3f));
-    }
-    if (hasImportedFile && thumbnail.getTotalLength() > 0.0)
-    {
-        const float spectTop = waveformBounds().getBottom() + 8.f;
-        const float spectBottom = h - 66.f;
-        if (spectBottom > spectTop)
+        juce::Path upper,lower;
+        const auto total=LevelProcessor::waveLength;
+        const auto current=processor.wavePos.load(std::memory_order_relaxed);
+        const int points=juce::jmax(1,(int)waveArea.getWidth()-10);
+        for(int i=0;i<points;++i)
         {
-            const juce::Rectangle<float> spectArea(206.f, spectTop, w - 316.f, spectBottom - spectTop);
-            if (auto rendered = spectrogram.getImage(); rendered.isValid())
-                g.drawImage(rendered, spectArea, juce::RectanglePlacement::stretchToFit);
-            else {
-                g.setColour(muted);
-                g.drawText("SPECTROGRAM - ANALYZING", spectArea.toNearestInt(), juce::Justification::centred);
-            }
-            g.setColour(muted);
-            g.setFont(juce::Font(juce::FontOptions(10.f)));
-            g.drawText(juce::String(spectrogram.upperFrequencyHz() / 1000.f, 1) + " kHz", (int)spectArea.getX() + 5, (int)spectArea.getY() + 3, 75, 16, juce::Justification::left);
-            g.drawText("200 Hz", (int)spectArea.getX() + 5, (int)spectArea.getBottom() - 19, 75, 16, juce::Justification::left);
+            const unsigned offset=(unsigned)((points-i)*(int)total/points);
+            const auto idx=(current+(unsigned)total-1u-offset)%(unsigned)total;
+            const float sample=processor.wave[idx].load(std::memory_order_relaxed);
+            const float amp=juce::jlimit(0.f,waveArea.getHeight()*.46f,std::abs(sample)*waveArea.getHeight()*1.5f);
+            const float px=waveArea.getX()+5.f+i;
+            const float mid=waveArea.getCentreY();
+            if(i==0){upper.startNewSubPath(px,mid-amp);lower.startNewSubPath(px,mid+amp);}
+            else {upper.lineTo(px,mid-amp);lower.lineTo(px,mid+amp);}
         }
-        const auto regionArea = waveformBounds();
-        const auto duration = thumbnail.getTotalLength();
-        for (const auto& region : regions.all())
-        {
-            const float left = regionArea.getX() + (float)(region.startSeconds / duration) * regionArea.getWidth();
-            const float right = regionArea.getX() + (float)(region.endSeconds / duration) * regionArea.getWidth();
-            if (right <= left) continue;
-            const auto colour = region.enabled ? juce::Colour(0xffe9a65f) : juce::Colour(0xff66717c);
-            g.setColour(colour.withAlpha(0.25f));
-            g.fillRect(juce::Rectangle<float>(left, regionArea.getY(), right - left, regionArea.getHeight()));
-            g.setColour(colour);
-            g.drawVerticalLine((int)left, regionArea.getY(), regionArea.getBottom());
-            g.drawVerticalLine((int)right, regionArea.getY(), regionArea.getBottom());
-        }
+        g.setColour(juce::Colour(0xffafb0b4));
+        g.strokePath(upper,juce::PathStrokeType(1.3f));
+        g.strokePath(lower,juce::PathStrokeType(1.3f));
+        g.setColour(secondary);
+        g.setFont(juce::Font(juce::FontOptions(12.f)));
+        g.drawText("LIVE AUDIO — press Play in your DAW",waveArea.toNearestInt().reduced(17),juce::Justification::topLeft);
     }
-    g.setColour(text);
-    g.setFont(juce::Font(juce::FontOptions(11.f, juce::Font::bold)));
-    g.drawText(hasImportedFile ? "IMPORTED  /  " + importedFilename : juce::String(names[selected]) + "  /  LIVE AUDIO", (int)x + 16, (int)y + 12, (int)graphWidth - 30, 20, juce::Justification::left);
-
-    const float meterStart = w - 91.f;
-    g.setColour(panel);
-    g.fillRoundedRectangle(meterStart, y, 73.f, graphHeight, 8.f);
-    auto drawMeter = [&](float positionX, float peak, const char* name) {
-        g.setColour(muted);
-        g.drawText(name, (int)positionX - 3, (int)y + 16, 34, 20, juce::Justification::centred);
-        g.setColour(outline);
-        g.fillRoundedRectangle(positionX + 8.f, y + 52.f, 13.f, graphHeight - 83.f, 3.f);
-        const float level = juce::jlimit(0.f, 1.f, std::sqrt(juce::jmax(0.f, peak)));
-        if (level > .0001f)
+    // Approved lower module control panel.
+    const float lowerY=h-205.f;
+    g.setGradientFill(juce::ColourGradient(panelHi,250.f,lowerY,panelBg,w-10.f,h-25.f,false));
+    g.fillRoundedRectangle(18.f,lowerY,w-36.f,169.f,14.f);
+    g.setColour(darkLine);
+    g.drawRoundedRectangle(18.f,lowerY,w-36.f,169.f,14.f,1.f);
+    g.setColour(white);
+    g.setFont(juce::Font(juce::FontOptions(22.f,juce::Font::bold)));
+    g.drawText(names[selected],41,(int)lowerY+18,175,35,juce::Justification::left);
+    g.setColour(secondary);
+    g.setFont(juce::Font(juce::FontOptions(13.f)));
+    const char* desc[]={
+        "Reduce low-level noise\nwith a gentle envelope.",
+        "Shape low-frequency rumble\nand unwanted proximity.",
+        "Reduce level between\nvocal phrases.",
+        "Smooth out changes\nin vocal loudness.",
+        "Requires vocal-event\ndetection model.",
+        "Control excessive\nhigh-frequency energy.",
+        "Requires verified\nclick detection."
+    };
+    g.drawFittedText(desc[selected],43,(int)lowerY+62,206,72,juce::Justification::topLeft,3);
+    g.setFont(juce::Font(juce::FontOptions(12.f)));
+    if(selected==0)
+    {
+        g.setColour(secondary);g.drawText("Delta",w-447,(int)lowerY+30,85,20,juce::Justification::centred);
+        g.drawText("MODE",w-275,(int)lowerY+39,205,23,juce::Justification::left);
+        g.setColour(gold);
+        g.drawText("SPECTRAL MODELS NOT INSTALLED",710,(int)lowerY+143,350,17,juce::Justification::left);
+    }
+    // Bottom meters are driven by actual input/output peak atomics.
+    const float footerY=h-27.f;
+    auto meter=[&](float left,float peak,const char* label)
+    {
+        g.setColour(secondary);g.setFont(juce::Font(juce::FontOptions(11.f)));
+        g.drawText(label,(int)left-60,(int)footerY-5,55,17,juce::Justification::right);
+        g.setColour(juce::Colour(0xff2b2d32));
+        g.fillRoundedRectangle(left,footerY,158.f,9.f,4.f);
+        const float fraction=juce::jlimit(0.f,1.f,std::sqrt(juce::jmax(0.f,peak)));
+        if(fraction>0.0001f)
         {
-            g.setColour(level > .9f ? juce::Colour(0xffed956e) : juce::Colour(0xff8fd0a6));
-            const float available = graphHeight - 87.f;
-            g.fillRoundedRectangle(positionX + 10.f, y + 54.f + available * (1.f - level), 9.f, available * level, 2.f);
+            g.setColour(gold);
+            g.fillRoundedRectangle(left,footerY,158.f*fraction,9.f,4.f);
         }
     };
-    drawMeter(w - 86.f, processor.meterIn.load(std::memory_order_relaxed), "IN");
-    drawMeter(w - 51.f, processor.meterOut.load(std::memory_order_relaxed), "OUT");
-    g.setColour(muted);
-    g.setFont(juce::Font(juce::FontOptions(12.f)));
-    const auto exportStatus = exporter.currentStatus();
-    const char* statusText = exportStatus == LevelOfflineExport::Status::Working ? "  |  EXPORTING WAV..." :
-                             exportStatus == LevelOfflineExport::Status::Complete ? "  |  WAV SAVED" :
-                             exportStatus == LevelOfflineExport::Status::Failed ? "  |  EXPORT ERROR" : "";
-    g.drawText(juce::String("LEVEL v0.4.1  •  NATIVOS AUDIO  •  DSP SAFETY BUILD") + statusText, 210, (int)h - 41, (int)w - 225, 22, juce::Justification::left);
+    meter(76.f,processor.meterIn.load(std::memory_order_relaxed),"INPUT");
+    meter(w-279.f,processor.meterOut.load(std::memory_order_relaxed),"OUTPUT");
+    g.setColour(secondary);
+    g.setFont(juce::Font(juce::FontOptions(11.f)));
+    const char* status=exporter.currentStatus()==LevelOfflineExport::Status::Working?"EXPORTING...":
+        exporter.currentStatus()==LevelOfflineExport::Status::Complete?"WAV EXPORTED":
+        exporter.currentStatus()==LevelOfflineExport::Status::Failed?"EXPORT FAILED":
+        hasImportedFile?"IMPORTED AUDIO READY":"LIVE INPUT";
+    g.drawText(status,(int)(w*.46f),(int)footerY-7,210,25,juce::Justification::centred);
 }
 
 juce::AudioProcessorEditor* LevelProcessor::createEditor()
@@ -495,15 +568,16 @@ juce::AudioProcessorEditor* LevelProcessor::createEditor()
 
 juce::Rectangle<float> LevelEditor::waveformBounds() const
 {
-    return { 206.f, 276.f, (float)getWidth() - 316.f, ((float)getHeight() - 347.f) * 0.52f };
+    return { 261.f, 181.f, (float)getWidth()-279.f, (float)getHeight()-433.f };
 }
 
 double LevelEditor::waveformTimeAt(float x) const
 {
-    const auto bounds = waveformBounds();
-    const auto duration = thumbnail.getTotalLength();
-    if (duration <= 0.0 || bounds.getWidth() <= 0.0f) return 0.0;
-    return duration * (double)juce::jlimit(0.f, 1.f, (x - bounds.getX()) / bounds.getWidth());
+    const auto bounds=waveformBounds();
+    const auto length=thumbnail.getTotalLength();
+    if(length<=0.0||bounds.getWidth()<=0.0f)return 0.0;
+    const float pos=juce::jlimit(0.f,1.f,(x-bounds.getX())/bounds.getWidth());
+    return length*(viewStart+(double)pos/(double)zoom);
 }
 
 bool LevelEditor::isInterestedInFileDrag(const juce::StringArray& files)
