@@ -45,7 +45,7 @@ private:
         if (out.existsAsFile() && !out.deleteFile()) {
             status.store(Status::Failed); return;
         }
-        auto stream = std::unique_ptr<juce::OutputStream>(out.createOutputStream());
+        auto stream = out.createOutputStream();
         if (!stream || !stream->openedOk()) {
             status.store(Status::Failed); return;
         }
