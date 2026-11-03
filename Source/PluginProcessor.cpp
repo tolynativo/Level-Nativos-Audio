@@ -94,7 +94,7 @@ void LevelProcessor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuff
    // At BODY=0 dB the low-pass component is not boosted back into the HP path.
    lows[k]=hpAlpha*lows[k]+(1.f-hpAlpha)*v;
    const float highpassed=v-lows[k];
-   const float bodyDelta=juce::jlimit(-.8f,1.0f,(bodySmoothed-1.f)*.25f);
+   const float bodyDelta=juce::jlimit(-.8f,1.5f,(bodySmoothed-1.f)*.5f);
    const float lowProcessed=highpassed+bodyDelta*lows[k];
    v+=lowendWet[k]*(lowProcessed-v);
    // Clean: conservative slow downward expansion below -52 dBFS.
