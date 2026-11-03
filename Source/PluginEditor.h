@@ -1,6 +1,7 @@
 #pragma once
 #include "PluginProcessor.h"
 #include "RegionManager.h"
+#include "Spectrogram.h"
 #include <array>
 #include <memory>
 
@@ -30,6 +31,7 @@ private:
     juce::AudioThumbnailCache thumbnailCache{5};
     juce::AudioThumbnail thumbnail{256, formatManager, thumbnailCache};
     level::RegionManager regions;
+    LevelSpectrogram spectrogram;
     bool hasImportedFile = false;
     float mouseDownX = -1.f;
     juce::String importedFilename;
